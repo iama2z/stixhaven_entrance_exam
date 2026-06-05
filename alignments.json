@@ -1,0 +1,47 @@
+{
+  "Lawful Good": {
+    "name": "Lawful Good",
+    "archetype": "The Model Prefect",
+    "description": "Believes in a just academic order; combines a deep sense of duty with the promotion of institutional welfare.[cite: 7]"
+  },
+  "Neutral Good": {
+    "name": "Neutral Good",
+    "archetype": "The Dedicated Ensemble Player",
+    "description": "Community-focused; prioritizes uplifting teammates and fostering harmony within the system.[cite: 7]"
+  },
+  "Chaotic Good": {
+    "name": "Chaotic Good",
+    "archetype": "The Passionate Rebel",
+    "description": "Values creative/moral freedom over bureaucracy; frequently breaks rules to protect or assist peers.[cite: 7]"
+  },
+  "Lawful Neutral": {
+    "name": "Lawful Neutral",
+    "archetype": "The Rigid Formalist",
+    "description": "Operates strictly by the student handbook, tradition, or a personal code, independent of moral pressures.[cite: 7]"
+  },
+  "True Neutral": {
+    "name": "True Neutral",
+    "archetype": "The Focused Academic Artist",
+    "description": "Detached from campus politics and social drama; prefers to observe the multiverse from a distance.[cite: 7]"
+  },
+  "Chaotic Neutral": {
+    "name": "Chaotic Neutral",
+    "archetype": "The Free-Spirited Maverick",
+    "description": "Pushes the boundaries of university policy for the sake of personal expression and exploration.[cite: 7]"
+  },
+  "Lawful Evil": {
+    "name": "Lawful Evil",
+    "archetype": "The Ruthless Curve-Setter",
+    "description": "Methodically exploits the university hierarchy and rules to ensure their own advancement at any cost.[cite: 7]"
+  },
+  "Neutral Evil": {
+    "name": "Neutral Evil",
+    "archetype": "The Unscrupulous Careerist",
+    "description": "Does whatever they can get away with to succeed, lacking compassion for struggling classmates.[cite: 7]"
+  },
+  "Chaotic Evil": {
+    "name": "Chaotic Evil",
+    "archetype": "The Anarchic Disruptor",
+    "description": "Spurred by personal greeds or animosities; acts with arbitrary disregard for campus safety or academic progress.[cite: 7]"
+  }
+}
