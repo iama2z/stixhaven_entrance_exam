@@ -143,4 +143,44 @@
     "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
     "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
   }
+  "Lorehold College": {
+    "name": "Lorehold",
+    "description": "Researching the past through archaeomancy.[cite: 8]",
+    "skillProficiencies": "History, Religion[cite: 8]",
+    "toolProficiencies": "One type of artisan's tools (Mason's or Smith's)[cite: 8]",
+    "originFeat": "Strixhaven Initiate[cite: 8]",
+    "bonusSpells": "Sacred Flame, Thaumaturgy, Comprehend Languages[cite: 8]"
+  },
+  "Prismari College": {
+    "name": "Prismari",
+    "description": "Expressing magic through performance and elemental art.[cite: 8]",
+    "skillProficiencies": "Acrobatics, Performance[cite: 8]",
+    "toolProficiencies": "One type of musical instrument or artisan's tools[cite: 8]",
+    "originFeat": "Strixhaven Initiate[cite: 8]",
+    "bonusSpells": "Fire Bolt, Ray of Frost, Shield[cite: 8]"
+  },
+  "Quandrix College": {
+    "name": "Quandrix",
+    "description": "Exploring the mathematical patterns of nature.[cite: 8]",
+    "skillProficiencies": "Arcana, Investigation[cite: 8]",
+    "toolProficiencies": "Cook's utensils or navigator's tools[cite: 8]",
+    "originFeat": "Strixhaven Initiate[cite: 8]",
+    "bonusSpells": "Guidance, Mage Hand, Entangle[cite: 8]"
+  },
+  "Silverquill College": {
+    "name": "Silverquill",
+    "description": "Harnessing the power of words and eloquence.[cite: 8]",
+    "skillProficiencies": "Intimidation, Persuasion[cite: 8]",
+    "toolProficiencies": "Calligrapher's supplies or painter's supplies[cite: 8]",
+    "originFeat": "Strixhaven Initiate[cite: 8]",
+    "bonusSpells": "Sacred Flame, Vicious Mockery, Guiding Bolt[cite: 8]"
+  },
+  "Witherbloom College": {
+    "name": "Witherbloom",
+    "description": "Studying the duality of life and death.[cite: 8]",
+    "skillProficiencies": "Animal Handling, Nature[cite: 8]",
+    "toolProficiencies": "Herbalism kit[cite: 8]",
+    "originFeat": "Strixhaven Initiate[cite: 8]",
+    "bonusSpells": "Chill Touch, Spare the Dying, Cure Wounds[cite: 8]"
+  }
 }
