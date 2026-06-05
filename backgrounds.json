@@ -1,0 +1,146 @@
+{
+  "Acolyte": {
+    "name": "Acolyte",
+    "description": "You have spent your life in the service of a temple to a specific deity or pantheon, acting as an intermediary between the mortal and the divine.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Artisan": {
+    "name": "Artisan",
+    "description": "You are a master of a specific craft, such as smithing or masonry, and have a history of producing material goods within a guild structure.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Charlatan": {
+    "name": "Charlatan",
+    "description": "You have a natural talent for deception and are adept at assuming false identities or running scams to survive and thrive.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Criminal": {
+    "name": "Criminal",
+    "description": "You have a history of breaking the law and surviving on the fringes of society through underworld contacts and illicit activities.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Entertainer": {
+    "name": "Entertainer",
+    "description": "You excel at performances that capture the imagination of an audience, whether through music, dance, or storytelling.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Farmer": {
+    "name": "Farmer",
+    "description": "You come from a rural background where you labored in the fields and worked the land to provide for your community.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Guard": {
+    "name": "Guard",
+    "description": "You have served as a sentinel or watchman, protecting the peace of a settlement or the lives of specific individuals.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Guide": {
+    "name": "Guide",
+    "description": "You have spent significant time in the wilderness, learning the paths of the forest and the secrets of the untamed world.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Hermit": {
+    "name": "Hermit",
+    "description": "You lived in seclusion for a formative period of your life, seeking quiet contemplation or the revelation of hidden truths.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Merchant": {
+    "name": "Merchant",
+    "description": "You have a background in trade and commerce, navigating the marketplace to facilitate the flow of gold and goods.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Noble": {
+    "name": "Noble",
+    "description": "You carry a title and come from a family of high social standing that wields significant political or land-based influence.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Sage": {
+    "name": "Sage",
+    "description": "You are a dedicated scholar of the multiverse, having spent your life seeking knowledge within ancient libraries and scrolls.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Sailor": {
+    "name": "Sailor",
+    "description": "You are a seasoned traveler of the seas, accustomed to the rigors of life aboard a ship and the navigation of the waves.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Scribe": {
+    "name": "Scribe",
+    "description": "You have dedicated your life to the written word, transcribing records and preserving history through meticulous documentation.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Soldier": {
+    "name": "Soldier",
+    "description": "You were a member of a standing army or mercenary company, trained in the tactical arts of war and front-line combat.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  },
+  "Wayfarer": {
+    "name": "Wayfarer",
+    "description": "You have spent your life on the move, wandering from place to place and surviving on the road through grit and observation.[cite: 6]",
+    "abilityScoreIncreases": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "originFeat": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "skillProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "toolProficiencies": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]",
+    "startingEquipment": "Mechanical data for this 2024 background is not present in the provided Source Context.[cite: 6]"
+  }
+}
