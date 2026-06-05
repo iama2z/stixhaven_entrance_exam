@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strixhaven Entrance Exam</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
+  <div id="root"></div>
+
+  <script type="module">
+    // Import Firebase from the official CDN
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // Your Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDNpbiRhVCXSRov1Uv4bkEAH7MVvdGTZio",
+      authDomain: "strixhaven-entrance-exam.firebaseapp.com",
+      projectId: "strixhaven-entrance-exam",
+      storageBucket: "strixhaven-entrance-exam.firebasestorage.app",
+      messagingSenderId: "8332021790",
+      appId: "1:8332021790:web:f704df9cc7f6d897de1e0f",
+      measurementId: "G-87PT8HMF3V"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Expose database utilities to the global window so React can access them
+    window.firebaseDb = db;
+    window.firebaseAuth = auth;
+
+    // Run silent player authentication on page load
+    async function initializePlayerSession() {
+      try {
+        const userCredential = await signInAnonymously(auth);
+        console.log("✓ Authenticated with Strixhaven Cloud. Student UID:", userCredential.user.uid);
+        window.studentUid = userCredential.user.uid;
+      } catch (error) {
+        console.warn("⚠️ Firebase Auth blocked or offline. Switching to Local Session Mode.", error.message);
+        let localUid = localStorage.getItem("strixhaven_local_uid");
+        if (!localUid) {
+          localUid = "offline_student_" + Math.random().toString(36).substr(2, 9);
+          localStorage.setItem("strixhaven_local_uid", localUid);
+        }
+        console.log("✓ Local Sandbox Session Active. Student UID:", localUid);
+        window.studentUid = localUid;
+      }
+    }
+    
+    initializePlayerSession();
+  </script>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // --- STRIXHAVEN DATABASE ---
+    const COLLEGES = {
+      Prismari: { name: "Prismari", description: "The College of Elemental Arts. Where art and magic fuse in expressive, high-energy performances.", primer: "Prismari Primer", feat: "Prismari Initiate", skills: ["Acrobatics", "Performance"], spellcastingAbility: "CHA", spells: ["Fire Bolt", "Ray of Frost", "Thunderwave"], motto: "Express yourself with raw elemental power." },
+      Silverquill: { name: "Silverquill", description: "The College of Eloquence. Wizards who wield the power of words, using shadow-magic ink and inspiring poetry.", primer: "Silverquill Statement", feat: "Silverquill Initiate", skills: ["Deception", "Intimidation"], spellcastingAbility: "CHA", spells: ["Sacred Flame", "Vicious Mockery", "Guiding Bolt"], motto: "Words are weapons; wield them with style." },
+      Quandrix: { name: "Quandrix", description: "The College of Numerology. Math magicians who manipulate physical reality through geometric equations.", primer: "Quandrix Query", feat: "Quandrix Initiate", skills: ["Arcana", "Investigation"], spellcastingAbility: "INT", spells: ["Guidance", "Mage Hand", "Shield"], motto: "Reality is a formula waiting to be rewritten." },
+      Witherbloom: { name: "Witherbloom", description: "The College of Essence Studies. Bio-mages who draw power from the friction between life and death.", primer: "Witherbloom Wasting", feat: "Witherbloom Initiate", skills: ["Medicine", "Nature"], spellcastingAbility: "WIS", spells: ["Spare the Dying", "Acid Splash", "Cure Wounds"], motto: "Grow, decay, and channel the organic weave." },
+      Lorehold: { name: "Lorehold", description: "The College of Archaeomancy. Historians who summon spirits of the past and infuse relics with dynamic magic.", primer: "Lorehold Ledger", feat: "Lorehold Initiate", skills: ["History", "Religion"], spellcastingAbility: "INT", spells: ["Light", "Sacred Flame", "Comprehend Languages"], motto: "Dig deep into the past to light the future." }
+    };
+
+    const LINEAGES = {
+      Owlin: { name: "Owlin", description: "Distant kin of giant owls from the Feywild. Nimble, stealthy, and able to fly.", size: "Medium", speed: 30, traits: ["Darkvision (120ft)", "Flight (equal to walking speed)", "Silent Feathers (Stealth proficiency)"] },
+      Human: { name: "Human", description: "Versatile, curious, and resilient. Found throughout the infinite multiverse.", size: "Medium", speed: 30, traits: ["Resourceful (gain Heroic Inspiration at long rests)", "Versatile (Extra Skill proficiency of choice)"] },
+      Elf: { name: "Elf", description: "Graceful and magical folk connected to nature or the Feywild.", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Fey Ancestry (advantage vs Charm)", "Keen Senses (Perception proficiency)"] },
+      Dwarf: { name: "Dwarf", description: "Stout and resilient defenders, renowned craftspeople and academic physical bulwarks.", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Dwarven Resilience (resistance to poison)", "Dwarven Toughness (+1 max HP per level)"] },
+      Tiefling: { name: "Tiefling", description: "Bearers of a supernatural heritage traced back to planes of fire, shadow, or brimstone.", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Fire Resistance", "Thaumaturgy Cantrip (extra spell)"] }
+    };
+
+    const CLASSES = {
+      Wizard: { name: "Wizard", hitDie: 6, primary: "INT", saves: ["INT", "WIS"], weapons: ["Dagger", "Quarterstaff"] },
+      Sorcerer: { name: "Sorcerer", hitDie: 6, primary: "CHA", saves: ["CON", "CHA"], weapons: ["Dagger", "Light Crossbow"] },
+      Bard: { name: "Bard", hitDie: 8, primary: "CHA", saves: ["DEX", "CHA"], weapons: ["Rapier", "Shortbow"] },
+      Druid: { name: "Druid", hitDie: 8, primary: "WIS", saves: ["INT", "WIS"], weapons: ["Sickle", "Quarterstaff"] },
+      Cleric: { name: "Cleric", hitDie: 8, primary: "WIS", saves: ["WIS", "CHA"], weapons: ["Mace", "Light Crossbow"] },
+      Fighter: { name: "Fighter", hitDie: 10, primary: "STR", saves: ["STR", "CON"], weapons: ["Greatsword", "Longbow"] },
+      Rogue: { name: "Rogue", hitDie: 8, primary: "DEX", saves: ["DEX", "INT"], weapons: ["Rapier", "Shortbow"] }
+    };
+
+    const CLUBS = {
+      "Fine Artists": { name: "Distinguished Society of Fine Artists", skills: ["Performance", "Sleight of Hand"], npc: "Rosie Wirthmore (Year 1)", description: "For creators who paint, sculpt, or manifest grand beauty." },
+      "LARP Guild": { name: "LARP Guild", skills: ["Acrobatics", "Deception"], npc: "Grayson Wildemere (Year 1)", description: "Re-enacting historic battles with padded foam." },
+      "Strixhaven Star": { name: "Strixhaven Star Newspaper", skills: ["Investigation", "Insight"], npc: "Jenevelle Rill (Year 1)", description: "Chasing rumors and detailing the campus's deepest secrets." }
+    };
+
+    const STIPEND_KITS = {
+      "Star Performer": { name: "Star Performer Kit", contents: "An instrument of choice, premium ink/paints, performance notebook, silk sash." },
+      "Stealthy Archivist": { name: "Stealthy Archivist Kit", contents: "Hooded lantern, steel hand-mirror, multi-key set, durable leather backpack." }
+    };
+
+    const SKILL_LIST = [
+      { name: "Acrobatics", stat: "DEX" }, { name: "Arcana", stat: "INT" }, { name: "Athletics", stat: "STR" },
+      { name: "Deception", stat: "CHA" }, { name: "History", stat: "INT" }, { name: "Insight", stat: "WIS" },
+      { name: "Intimidation", stat: "CHA" }, { name: "Investigation", stat: "INT" }, { name: "Medicine", stat: "WIS" },
+      { name: "Nature", stat: "INT" }, { name: "Perception", stat: "WIS" }, { name: "Performance", stat: "CHA" },
+      { name: "Persuasion", stat: "CHA" }, { name: "Religion", stat: "INT" }, { name: "Stealth", stat: "DEX" }
+    ];
+
+    function App() {
+      const [phase, setPhase] = useState(1);
+      const [activeSheetTab, setActiveSheetTab] = useState(1);
+      const [isSaving, setIsSaving] = useState(false);
+
+      // Character State
+      const [characterName, setCharacterName] = useState("");
+      const [playerName, setPlayerName] = useState("");
+      const [selectedLineage, setSelectedLineage] = useState("Human");
+      const [selectedCollege, setSelectedCollege] = useState("Prismari");
+      const [selectedClass, setSelectedClass] = useState("Wizard");
+      const [selectedClub, setSelectedClub] = useState("Fine Artists");
+      const [selectedStipend, setSelectedStipend] = useState("Star Performer");
+      const [alignment, setAlignment] = useState("Neutral Good");
+      const [alignmentStyle, setAlignmentStyle] = useState("Dedicated Ensemble Player");
+      
+      const [baseScores, setBaseScores] = useState({ STR: 10, DEX: 13, CON: 12, INT: 15, WIS: 14, CHA: 8 });
+      const [scoreIncreases, setScoreIncreases] = useState({ STR: 0, DEX: 0, CON: 1, INT: 2, WIS: 0, CHA: 0 });
+      const [examAnswers, setExamAnswers] = useState({});
+      const [selectedRemediation, setSelectedRemediation] = useState(null);
+      const [selectedSkills, setSelectedSkills] = useState(["Arcana", "Performance"]);
+      const [selectedSpells, setSelectedSpells] = useState(["Fire Bolt", "Thunderwave"]);
+      const [selectedWeapon, setSelectedWeapon] = useState("Quarterstaff");
+      
+      const [appearance, setAppearance] = useState({ age: "18", height: "5'10\"", weight: "140 lbs", eyes: "Amber", skin: "Fair", hair: "Dark curls" });
+      const [backstory, setBackstory] = useState("");
+      const [flaw, setFlaw] = useState("A crippling insecurity regarding physical clumsy maneuvers");
+
+      const [customJobs, setCustomJobs] = useState({ employer: "Firejolt Café", coworker: "Tavern Keep" });
+      const [npcRelationships, setNpcRelationships] = useState([
+        { name: "Rosie Wirthmore", points: 1, relationship: "Art Class Buddy", isFriend: true, isRival: false }
+      ]);
+
+      const updateBaseScoresBasedOnClass = (className) => {
+        let newBase = { STR: 8, DEX: 12, CON: 13, INT: 10, WIS: 14, CHA: 15 };
+        if (className === "Wizard") newBase = { STR: 8, DEX: 13, CON: 14, INT: 15, WIS: 12, CHA: 10 };
+        else if (className === "Fighter") newBase = { STR: 15, DEX: 13, CON: 14, INT: 8, WIS: 12, CHA: 10 };
+        else if (className === "Rogue") newBase = { STR: 10, DEX: 15, CON: 13, INT: 12, WIS: 14, CHA: 8 };
+        else if (className === "Druid" || className === "Cleric") newBase = { STR: 10, DEX: 12, CON: 13, INT: 8, WIS: 15, CHA: 14 };
+        
+        setBaseScores(newBase);
+        const currentPrimary = CLASSES[className]?.primary;
+        let newIncreases = { STR: 0, DEX: 0, CON: 0, INT: 0, WIS: 0, CHA: 0 };
+        if (currentPrimary) {
+          newIncreases[currentPrimary] = 2;
+          newIncreases[currentPrimary === "CON" ? "WIS" : "CON"] = 1;
+        }
+        setScoreIncreases(newIncreases);
+      };
+
+      useEffect(() => {
+        updateBaseScoresBasedOnClass(selectedClass);
+      }, [selectedClass]);
+
+      // Math Helpers
+      const getMod = (stat) => Math.floor((((baseScores[stat] || 10) + (scoreIncreases[stat] || 0)) - 10) / 2);
+      const getModStr = (stat) => getMod(stat) >= 0 ? `+${getMod(stat)}` : `${getMod(stat)}`;
+      const getTotalScore = (stat) => (baseScores[stat] || 10) + (scoreIncreases[stat] || 0);
+      const getAC = () => ["Fighter"].includes(selectedClass) ? 16 : 10 + getMod("DEX");
+      const getMaxHP = () => (CLASSES[selectedClass]?.hitDie || 8) + getMod("CON") + (selectedLineage === "Dwarf" ? 1 : 0);
+      const getSpellSaveDC = () => 10 + getMod(COLLEGES[selectedCollege]?.spellcastingAbility || "INT");
+      const getSpellAttackBonus = () => 2 + getMod(COLLEGES[selectedCollege]?.spellcastingAbility || "INT");
+
+      const handleNextPhase = () => { if (phase < 11) setPhase(phase + 1); };
+      const handlePrevPhase = () => { if (phase > 1) setPhase(phase - 1); };
+
+      // --- FIREBASE SUBMISSION LOGIC ---
+      const submitToFirebase = async () => {
+        if (!window.firebaseDb || !window.studentUid) {
+          alert("Error: Database disconnected. Ensure you are testing over a live URL.");
+          return;
+        }
+
+        setIsSaving(true);
+        try {
+          // Native Firestore logic exposed from index.html script tag
+          const { setDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+          
+          const studentPayload = {
+            characterName, playerName, selectedLineage, selectedCollege,
+            selectedClass, selectedClub, selectedStipend, alignment,
+            baseScores, scoreIncreases, examAnswers, selectedSkills,
+            selectedSpells, selectedWeapon, appearance, backstory,
+            flaw, customJobs, npcRelationships,
+            lastUpdated: new Date().toISOString()
+          };
+
+          const docRef = doc(window.firebaseDb, "student_enrollments", window.studentUid);
+          await setDoc(docRef, studentPayload, { merge: true });
+          
+          alert("Registration Submitted successfully to Firebase Database!");
+        } catch (error) {
+          console.error("Save Error:", error);
+          alert("Failed to save to cloud. Check developer console.");
+        }
+        setIsSaving(false);
+      };
+
+      return (
+        <div className="flex flex-col lg:flex-row h-screen">
+          {/* LEFT COLUMN: THE NARRATIVE PROCTOR EXAM PANEL */}
+          <section className="w-full lg:w-1/2 p-4 md:p-6 border-r border-slate-800 flex flex-col justify-between bg-slate-900/40 overflow-y-auto">
+            <div>
+              <header className="mb-6 border-b border-amber-500/30 pb-4">
+                <h1 className="text-xl font-bold tracking-wider text-amber-400 font-serif"><i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN UNIVERSITY</h1>
+                <p className="text-xs text-slate-400 tracking-widest uppercase">Entrance Assessment Phase {phase} of 11</p>
+                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div className="bg-gradient-to-r from-amber-600 to-amber-400 h-full transition-all" style={{ width: `${(phase / 11) * 100}%` }}></div>
+                </div>
+              </header>
+
+              {/* Exam Content Switches */}
+              {phase === 1 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-bolt mr-2"></i>Phase 1: Core Scenarios</h3>
+                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
+                    <p className="text-sm font-semibold text-amber-500 mb-2">Scenario: The Runaway Device</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {[
+                        { key: "A", label: "Duck underneath with high agility", stat: "DEX" },
+                        { key: "B", label: "Attempt to block it physically", stat: "STR" },
+                        { key: "C", label: "Chant a verbal dampening command", stat: "INT" }
+                      ].map(opt => (
+                        <button key={opt.key} onClick={() => setExamAnswers({...examAnswers, scenario1: opt.key})} className={`text-left p-3 text-xs rounded-lg border ${examAnswers.scenario1 === opt.key ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-950 border-slate-800 text-slate-300"}`}>
+                          {opt.label} <span className="float-right text-[10px] text-slate-500">({opt.stat})</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {phase === 2 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-compass mr-2"></i>Phase 2: Remediation</h3>
+                  {[{ id: "local", title: "The Hard-Working Local", bonus: "+1 Constitution" }, { id: "scholar", title: "The Stubborn Scholar", bonus: "+1 Intelligence" }].map(item => (
+                    <button key={item.id} onClick={() => setSelectedRemediation(item.id)} className={`w-full text-left p-4 rounded-xl border ${selectedRemediation === item.id ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
+                      <p className="font-bold text-amber-400">{item.title}</p>
+                      <p className="text-xs text-emerald-400 mt-1">{item.bonus}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {phase === 3 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-user mr-2"></i>Phase 3: Species Registry</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    {Object.keys(LINEAGES).map(key => (
+                      <button key={key} onClick={() => setSelectedLineage(key)} className={`p-4 rounded-xl border text-left ${selectedLineage === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800"}`}>
+                        <p className="font-bold text-amber-400">{LINEAGES[key].name}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {phase === 4 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-users mr-2"></i>Phase 4: Clubs</h3>
+                  {Object.keys(CLUBS).map(key => (
+                    <button key={key} onClick={() => setSelectedClub(key)} className={`w-full p-3 rounded-xl border text-left ${selectedClub === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
+                      <p className="font-bold">{CLUBS[key].name}</p>
+                      <p className="text-xs text-slate-400">{CLUBS[key].description}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {phase === 5 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-book-open mr-2"></i>Phase 5: College Alignment</h3>
+                  {Object.keys(COLLEGES).map(key => (
+                    <button key={key} onClick={() => setSelectedCollege(key)} className={`w-full p-4 rounded-xl border text-left ${selectedCollege === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
+                      <p className="font-bold">{COLLEGES[key].name}</p>
+                      <p className="text-xs text-slate-400">{COLLEGES[key].motto}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {phase === 6 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-medal mr-2"></i>Phase 6: Core Class Selection</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.keys(CLASSES).map(key => (
+                      <button key={key} onClick={() => setSelectedClass(key)} className={`p-3 rounded-lg border text-left ${selectedClass === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
+                        <span className="font-bold">{CLASSES[key].name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {phase === 7 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-swords mr-2"></i>Phase 7: Equipment</h3>
+                  {Object.keys(STIPEND_KITS).map(key => (
+                    <button key={key} onClick={() => setSelectedStipend(key)} className={`w-full p-3 rounded-xl border text-left ${selectedStipend === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
+                      <p className="font-bold">{STIPEND_KITS[key].name}</p>
+                    </button>
+                  ))}
+                  <div className="flex flex-wrap gap-2 mt-4">
+                    {["Rapier", "Quarterstaff", "Dagger", "Light Crossbow"].map(wep => (
+                      <button key={wep} onClick={() => setSelectedWeapon(wep)} className={`px-3 py-1.5 rounded-lg text-xs border ${selectedWeapon === wep ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-950 border-slate-800 text-slate-400"}`}>{wep}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {phase === 8 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-wand-magic-sparkles mr-2"></i>Phase 8: Spells</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {["Fire Bolt", "Ray of Frost", "Vicious Mockery", "Thunderwave", "Shield", "Guidance"].map(spell => {
+                      const isSelected = selectedSpells.includes(spell);
+                      return (
+                        <button key={spell} onClick={() => { isSelected ? setSelectedSpells(selectedSpells.filter(s => s !== spell)) : (selectedSpells.length < 3 && setSelectedSpells([...selectedSpells, spell])) }} className={`p-3 rounded-xl border text-xs text-left ${isSelected ? "bg-amber-500/25 border-amber-500 text-amber-200" : "bg-slate-900 border-slate-800 text-slate-400"}`}>
+                          {spell}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {phase === 9 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-square-check mr-2"></i>Phase 9: Skills</h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {SKILL_LIST.map(skill => {
+                      const isSelected = selectedSkills.includes(skill.name);
+                      return (
+                        <button key={skill.name} onClick={() => { isSelected ? setSelectedSkills(selectedSkills.filter(s => s !== skill.name)) : (selectedSkills.length < 4 && setSelectedSkills([...selectedSkills, skill.name])) }} className={`p-2.5 rounded-lg border text-xs text-left ${isSelected ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-900 border-slate-800 text-slate-400"}`}>
+                          {skill.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {phase === 10 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-shield-halved mr-2"></i>Phase 10: Alignment</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[ { title: "Passionate Rebel", align: "Chaotic Good" }, { title: "Ensemble Player", align: "Neutral Good" }, { title: "Free Spirit", align: "Chaotic Neutral" }].map(item => (
+                      <button key={item.title} onClick={() => { setAlignmentStyle(item.title); setAlignment(item.align); }} className={`p-3 rounded-lg border text-xs text-left ${alignmentStyle === item.title ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-950 border-slate-800 text-slate-400"}`}>
+                        <p className="font-bold">{item.title}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {phase === 11 && (
+                <div className="space-y-4">
+                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-file-lines mr-2"></i>Phase 11: File Completion</h3>
+                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
+                    <input type="text" value={characterName} onChange={(e) => setCharacterName(e.target.value)} placeholder="Character Name" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs" />
+                    <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="Player Name" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs" />
+                    <textarea value={backstory} onChange={(e) => setBackstory(e.target.value)} placeholder="Short backstory draft..." className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs h-24" />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 border-t border-slate-800/80 pt-4 flex justify-between items-center">
+              <button onClick={handlePrevPhase} disabled={phase === 1} className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 rounded-lg text-xs font-semibold">Previous</button>
+              {phase < 11 ? (
+                <button onClick={handleNextPhase} className="px-5 py-2 bg-amber-600 text-white rounded-lg text-xs font-semibold">Next Phase</button>
+              ) : (
+                <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg">
+                  <i className="fa-solid fa-cloud-arrow-up mr-2"></i> {isSaving ? "Syncing..." : "Submit to Firebase"}
+                </button>
+              )}
+            </div>
+          </section>
+
+          {/* RIGHT COLUMN: THE LIVE-UPDATING 4-PAGE CHARACTER SHEET PREVIEW */}
+          <section className="w-full lg:w-1/2 p-4 md:p-6 bg-slate-800/30 flex flex-col gap-4 overflow-y-auto">
+            <div className="flex gap-2 border-b border-slate-800 pb-3">
+              {[ { id: 1, label: "Page 1: Core" }, { id: 2, label: "Page 2: Backstory" }, { id: 3, label: "Page 3: Spells" }, { id: 4, label: "Page 4: Campus" } ].map(tab => (
+                <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-800"}`}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex-1 bg-[#fdfaf2] text-[#2c2214] p-5 rounded-2xl border-4 border-[#ded1ba]">
+              {activeSheetTab === 1 && (
+                <div className="space-y-4">
+                  <div className="border-b-2 border-[#2c2214] pb-4">
+                    <span className="text-[10px] uppercase text-[#66543b] font-bold">Character Name</span>
+                    <h2 className="text-xl font-bold font-serif">{characterName || "Unnamed Recruits"}</h2>
+                    <p className="text-xs font-bold text-slate-500 mt-1">{selectedClass} 1 | {selectedCollege} | {selectedLineage} | {alignment}</p>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    {Object.keys(baseScores).map(stat => (
+                      <div key={stat} className="border-2 border-[#2c2214] rounded-xl p-2 bg-[#f9f5eb] text-center shadow-sm">
+                        <span className="text-[9px] font-bold text-slate-500 uppercase">{stat}</span>
+                        <span className="text-base font-extrabold block text-amber-900">{getModStr(stat)}</span>
+                        <span className="text-xs font-mono">{getTotalScore(stat)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                     <div className="border border-[#2c2214]/30 rounded p-2 bg-[#f9f5eb] text-center text-xs font-bold"><span className="text-[9px] block text-slate-500">AC</span>{getAC()}</div>
+                     <div className="border border-[#2c2214]/30 rounded p-2 bg-[#f9f5eb] text-center text-xs font-bold"><span className="text-[9px] block text-slate-500">INIT</span>{getModStr("DEX")}</div>
+                     <div className="border border-[#2c2214]/30 rounded p-2 bg-[#f9f5eb] text-center text-xs font-bold text-emerald-900"><span className="text-[9px] block text-slate-500">HP</span>{getMaxHP()}</div>
+                  </div>
+                </div>
+              )}
+
+              {activeSheetTab === 2 && (
+                <div>
+                   <h3 className="text-base font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1">Backstory & Traits</h3>
+                   <div className="mt-4 bg-[#faf7f0] p-4 rounded-xl border border-[#2c2214]/20 text-xs leading-relaxed font-serif min-h-[150px]">
+                      {backstory || "No backstory recorded."}
+                   </div>
+                   <p className="mt-4 text-xs italic text-red-900">Flaw: {flaw}</p>
+                </div>
+              )}
+
+              {activeSheetTab === 3 && (
+                <div>
+                  <div className="flex justify-between items-end border-b border-[#2c2214] pb-2">
+                    <h3 className="text-base font-bold font-serif text-amber-900">Spellbook</h3>
+                    <div className="text-right text-xs"><span className="text-[9px] block uppercase text-slate-500">Save DC</span><span className="font-bold">{getSpellSaveDC()}</span></div>
+                  </div>
+                  <div className="mt-4 grid gap-2 text-xs">
+                     {selectedSpells.map(s => (
+                       <div key={s} className="bg-white/80 p-2 rounded border border-[#2c2214]/10 font-semibold">{s}</div>
+                     ))}
+                  </div>
+                </div>
+              )}
+
+              {activeSheetTab === 4 && (
+                <div className="space-y-4">
+                  <h3 className="text-base font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1">Strixhaven Progress</h3>
+                  <div className="bg-[#faf7f0] border border-[#2c2214]/20 p-3 rounded text-xs">
+                     <p className="font-bold text-amber-950">Active Club: {selectedClub}</p>
+                     <span className="text-[10px] bg-amber-900 text-white px-2 py-0.5 rounded-full mt-1 inline-block">Bonus: Student Die d4</span>
+                  </div>
+                  <div className="bg-[#faf7f0] border border-[#2c2214]/20 p-3 rounded text-xs">
+                     <p className="font-bold text-amber-950">Starting Job: {customJobs.employer}</p>
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">NPC Relationships</span>
+                    {npcRelationships.map((npc, idx) => (
+                      <p key={idx} className="text-xs bg-white p-2 rounded border border-[#2c2214]/10">{npc.name} ({npc.relationship}) - {npc.points} Pts</p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
