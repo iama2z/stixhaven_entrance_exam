@@ -113,6 +113,18 @@
     ],
     "proctorHint": "A top-tier choice for Support/Healers. Adrenaline Rush allows you to quickly reach a downed ally.[cite: 10]"
   },
+  "Owlin": {
+    "name": "Owlin",
+    "description": "Avian humanoids with diverse physiological traits suited for both the academic rigors and tactical demands of Strixhaven.[cite: 8]",
+    "size": "Small or Medium",
+    "speed": 30,
+    "darkvision": 120,
+    "traits": [
+      "Flight: You have a flying speed equal to your current walking speed.[cite: 8]",
+      "Silent Feathers: You have proficiency in the Stealth skill.[cite: 8]"
+    ],
+    "proctorHint": "Excellent for scouting and vertical mobility across the Strixhaven campus."
+  }
   "Tiefling": {
     "name": "Tiefling",
     "type": "Humanoid",
