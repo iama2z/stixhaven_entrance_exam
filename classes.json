@@ -1,0 +1,86 @@
+{
+  "Barbarian": {
+    "name": "Barbarian",
+    "hitDie": 12,
+    "primary": "STR",
+    "saves": ["STR", "CON"],
+    "weapons": ["Greataxe", "Handaxe", "Javelin"]
+  },
+  "Bard": {
+    "name": "Bard",
+    "hitDie": 8,
+    "primary": "CHA",
+    "saves": ["DEX", "CHA"],
+    "weapons": ["Rapier", "Longsword", "Dagger"]
+  },
+  "Cleric": {
+    "name": "Cleric",
+    "hitDie": 8,
+    "primary": "WIS",
+    "saves": ["WIS", "CHA"],
+    "weapons": ["Mace", "Warhammer", "Light Crossbow"]
+  },
+  "Druid": {
+    "name": "Druid",
+    "hitDie": 8,
+    "primary": "WIS",
+    "saves": ["INT", "WIS"],
+    "weapons": ["Scimitar", "Quarterstaff", "Sickle"]
+  },
+  "Fighter": {
+    "name": "Fighter",
+    "hitDie": 10,
+    "primary": "STR",
+    "saves": ["STR", "CON"],
+    "weapons": ["Greatsword", "Longbow", "Handaxe"]
+  },
+  "Monk": {
+    "name": "Monk",
+    "hitDie": 8,
+    "primary": "DEX",
+    "saves": ["STR", "DEX"],
+    "weapons": ["Shortsword", "Dart"]
+  },
+  "Paladin": {
+    "name": "Paladin",
+    "hitDie": 10,
+    "primary": "STR",
+    "saves": ["WIS", "CHA"],
+    "weapons": ["Longsword", "Javelin"]
+  },
+  "Ranger": {
+    "name": "Ranger",
+    "hitDie": 10,
+    "primary": "DEX",
+    "saves": ["STR", "DEX"],
+    "weapons": ["Shortsword", "Longbow"]
+  },
+  "Rogue": {
+    "name": "Rogue",
+    "hitDie": 8,
+    "primary": "DEX",
+    "saves": ["DEX", "INT"],
+    "weapons": ["Rapier", "Shortbow", "Dagger"]
+  },
+  "Sorcerer": {
+    "name": "Sorcerer",
+    "hitDie": 6,
+    "primary": "CHA",
+    "saves": ["CON", "CHA"],
+    "weapons": ["Light Crossbow", "Dagger"]
+  },
+  "Warlock": {
+    "name": "Warlock",
+    "hitDie": 8,
+    "primary": "CHA",
+    "saves": ["WIS", "CHA"],
+    "weapons": ["Light Crossbow", "Dagger"]
+  },
+  "Wizard": {
+    "name": "Wizard",
+    "hitDie": 6,
+    "primary": "INT",
+    "saves": ["INT", "WIS"],
+    "weapons": ["Quarterstaff", "Dagger"]
+  }
+}
