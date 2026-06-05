@@ -1,0 +1,128 @@
+{
+  "Aasimar": {
+    "name": "Aasimar",
+    "type": "Humanoid",
+    "size": "Medium or Small",
+    "speed": 30,
+    "darkvision": 60,
+    "traits": [
+      "Celestial Resistance: Resistance to Necrotic and Radiant damage.[cite: 10]",
+      "Healing Hands: As an action, restore HP equal to d4s equal to your Proficiency Bonus.[cite: 10]",
+      "Celestial Revelation: At 3rd level, choose Heavenly Wings, Inner Radiance, or Necrotic Shroud.[cite: 10]"
+    ],
+    "proctorHint": "Ideal for Support/Blasters. Use Heavenly Wings at 3rd level to gain the high ground.[cite: 10]"
+  },
+  "Dragonborn": {
+    "name": "Dragonborn",
+    "type": "Humanoid",
+    "size": "Medium",
+    "speed": 30,
+    "darkvision": 60,
+    "traits": [
+      "Breath Weapon: Replace one attack with an exhalation of draconic energy.[cite: 10]",
+      "Draconic Flight: At 5th level, sprout wings as a bonus action for 1 minute.[cite: 10]"
+    ],
+    "proctorHint": "Optimized for Blasters. Replacing an attack with a Breath Weapon allows you to maintain high action economy.[cite: 10]"
+  },
+  "Dwarf": {
+    "name": "Dwarf",
+    "type": "Humanoid",
+    "size": "Medium",
+    "speed": 25,
+    "darkvision": 60,
+    "traits": [
+      "Dwarven Resilience: Advantage on saves against poison; resistance to poison damage.[cite: 10]",
+      "Stonecunning: Double proficiency bonus on History checks related to stonework.[cite: 10]",
+      "Subraces: Hill Dwarf (+1 max HP/level) or Mountain Dwarf (Light/Medium Armor prof).[cite: 10]"
+    ],
+    "proctorHint": "A premier choice for Frontline Controllers. Heavy armor compatibility provides stability.[cite: 10]"
+  },
+  "Elf": {
+    "name": "Elf",
+    "type": "Humanoid",
+    "size": "Medium",
+    "speed": 30,
+    "darkvision": 60,
+    "traits": [
+      "Fey Ancestry: Advantage on saves against being Charmed; magic cannot put you to sleep.[cite: 10]",
+      "Trance: Meditate for 4 hours to gain the benefits of a Long Rest.[cite: 10]",
+      "Lineages: High Elf (Cantrip swap), Wood Elf (35 ft. Speed), or Drow (120 ft. Darkvision).[cite: 10]"
+    ],
+    "proctorHint": "The ultimate versatile Controller. High Elves can swap their cantrip daily to adapt.[cite: 10]"
+  },
+  "Gnome": {
+    "name": "Gnome",
+    "type": "Humanoid",
+    "size": "Small",
+    "speed": 30,
+    "darkvision": 60,
+    "traits": [
+      "Gnome Cunning: Advantage on all INT, WIS, and CHA saves against magic.[cite: 10]",
+      "Lineages: Forest Gnome (Minor Illusion) or Rock Gnome (Tinker devices).[cite: 10]"
+    ],
+    "proctorHint": "Tailored for Blasters. Gnome Cunning provides unmatched resilience against spellcasters.[cite: 10]"
+  },
+  "Goliath": {
+    "name": "Goliath",
+    "type": "Humanoid",
+    "size": "Medium",
+    "speed": 35,
+    "darkvision": 0,
+    "traits": [
+      "Giant Ancestry: Choose a heritage (Cloud, Fire, Frost, Hill, Stone, Storm) for a specific combat benefit.[cite: 10]",
+      "Large Form: At 5th level, become Large as a bonus action for 1 minute.[cite: 10]"
+    ],
+    "proctorHint": "Built for Melee Controllers. Hill Giant Ancestry allows you to knock enemies prone on a hit.[cite: 10]"
+  },
+  "Halfling": {
+    "name": "Halfling",
+    "type": "Humanoid",
+    "size": "Small",
+    "speed": 30,
+    "darkvision": 0,
+    "traits": [
+      "Lucky: Reroll a natural 1 on any d20 roll for an attack, check, or save.[cite: 10]",
+      "Brave: Advantage on saves against being Frightened.[cite: 10]",
+      "Halfling Nimbleness: Move through the space of any creature larger than you.[cite: 10]",
+      "Naturally Stealthy: Attempt to hide when obscured by a creature at least one size larger.[cite: 10]"
+    ],
+    "proctorHint": "Perfect for Support. The Lucky trait significantly reduces the risk of critical failures.[cite: 10]"
+  },
+  "Human": {
+    "name": "Human",
+    "type": "Humanoid",
+    "size": "Medium",
+    "speed": 30,
+    "darkvision": 0,
+    "traits": [
+      "Base Human: All six Ability Scores increase by 1.[cite: 10]",
+      "Variant Human: Increase two Ability Scores by 1. Gain one Skill proficiency and one Feat.[cite: 10]"
+    ],
+    "proctorHint": "The 'Jack-of-all-Trades.' Selecting a Feat at Level 1 allows you to specialize in a role.[cite: 10]"
+  },
+  "Orc": {
+    "name": "Orc",
+    "type": "Humanoid",
+    "size": "Medium",
+    "speed": 30,
+    "darkvision": 120,
+    "traits": [
+      "Adrenaline Rush: Bonus action to Dash and gain Temporary HP.[cite: 10]",
+      "Powerful Build: Count as one size larger for carrying capacity and pushing/dragging.[cite: 10]",
+      "Relentless Endurance: When reduced to 0 HP, drop to 1 HP instead (Once per Long Rest).[cite: 10]"
+    ],
+    "proctorHint": "A top-tier choice for Support/Healers. Adrenaline Rush allows you to quickly reach a downed ally.[cite: 10]"
+  },
+  "Tiefling": {
+    "name": "Tiefling",
+    "type": "Humanoid",
+    "size": "Medium or Small",
+    "speed": 30,
+    "darkvision": 60,
+    "traits": [
+      "Hellish Resistance: Resistance to Fire damage.[cite: 10]",
+      "Otherworldly Gaze: Gain Thaumaturgy, Hellish Rebuke, and Darkness.[cite: 10]"
+    ],
+    "proctorHint": "Natural fit for Blasters. Casting Darkness allows for consistent battlefield control.[cite: 10]"
+  }
+}
