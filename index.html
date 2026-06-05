@@ -69,21 +69,21 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
-    // --- STRIXHAVEN DATABASE ---
+    // --- LOCAL FALLBACK DATABASES ---
     const COLLEGES = {
-      Prismari: { name: "Prismari", description: "The College of Elemental Arts. Where art and magic fuse in expressive, high-energy performances.", primer: "Prismari Primer", feat: "Prismari Initiate", skills: ["Acrobatics", "Performance"], spellcastingAbility: "CHA", spells: ["Fire Bolt", "Ray of Frost", "Thunderwave"], motto: "Express yourself with raw elemental power." },
-      Silverquill: { name: "Silverquill", description: "The College of Eloquence. Wizards who wield the power of words, using shadow-magic ink and inspiring poetry.", primer: "Silverquill Statement", feat: "Silverquill Initiate", skills: ["Deception", "Intimidation"], spellcastingAbility: "CHA", spells: ["Sacred Flame", "Vicious Mockery", "Guiding Bolt"], motto: "Words are weapons; wield them with style." },
-      Quandrix: { name: "Quandrix", description: "The College of Numerology. Math magicians who manipulate physical reality through geometric equations.", primer: "Quandrix Query", feat: "Quandrix Initiate", skills: ["Arcana", "Investigation"], spellcastingAbility: "INT", spells: ["Guidance", "Mage Hand", "Shield"], motto: "Reality is a formula waiting to be rewritten." },
-      Witherbloom: { name: "Witherbloom", description: "The College of Essence Studies. Bio-mages who draw power from the friction between life and death.", primer: "Witherbloom Wasting", feat: "Witherbloom Initiate", skills: ["Medicine", "Nature"], spellcastingAbility: "WIS", spells: ["Spare the Dying", "Acid Splash", "Cure Wounds"], motto: "Grow, decay, and channel the organic weave." },
-      Lorehold: { name: "Lorehold", description: "The College of Archaeomancy. Historians who summon spirits of the past and infuse relics with dynamic magic.", primer: "Lorehold Ledger", feat: "Lorehold Initiate", skills: ["History", "Religion"], spellcastingAbility: "INT", spells: ["Light", "Sacred Flame", "Comprehend Languages"], motto: "Dig deep into the past to light the future." }
+      Prismari: { name: "Prismari", description: "The College of Elemental Arts...", primer: "Prismari Primer", feat: "Prismari Initiate", skills: ["Acrobatics", "Performance"], spellcastingAbility: "CHA", spells: ["Fire Bolt", "Ray of Frost", "Thunderwave"], motto: "Express yourself with raw elemental power." },
+      Silverquill: { name: "Silverquill", description: "The College of Eloquence...", primer: "Silverquill Statement", feat: "Silverquill Initiate", skills: ["Deception", "Intimidation"], spellcastingAbility: "CHA", spells: ["Sacred Flame", "Vicious Mockery", "Guiding Bolt"], motto: "Words are weapons; wield them with style." },
+      Quandrix: { name: "Quandrix", description: "The College of Numerology...", primer: "Quandrix Query", feat: "Quandrix Initiate", skills: ["Arcana", "Investigation"], spellcastingAbility: "INT", spells: ["Guidance", "Mage Hand", "Shield"], motto: "Reality is a formula waiting to be rewritten." },
+      Witherbloom: { name: "Witherbloom", description: "The College of Essence Studies...", primer: "Witherbloom Wasting", feat: "Witherbloom Initiate", skills: ["Medicine", "Nature"], spellcastingAbility: "WIS", spells: ["Spare the Dying", "Acid Splash", "Cure Wounds"], motto: "Grow, decay, and channel the organic weave." },
+      Lorehold: { name: "Lorehold", description: "The College of Archaeomancy...", primer: "Lorehold Ledger", feat: "Lorehold Initiate", skills: ["History", "Religion"], spellcastingAbility: "INT", spells: ["Light", "Sacred Flame", "Comprehend Languages"], motto: "Dig deep into the past to light the future." }
     };
 
     const LINEAGES = {
-      Owlin: { name: "Owlin", description: "Distant kin of giant owls from the Feywild. Nimble, stealthy, and able to fly.", size: "Medium", speed: 30, traits: ["Darkvision (120ft)", "Flight (equal to walking speed)", "Silent Feathers (Stealth proficiency)"] },
-      Human: { name: "Human", description: "Versatile, curious, and resilient. Found throughout the infinite multiverse.", size: "Medium", speed: 30, traits: ["Resourceful (gain Heroic Inspiration at long rests)", "Versatile (Extra Skill proficiency of choice)"] },
-      Elf: { name: "Elf", description: "Graceful and magical folk connected to nature or the Feywild.", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Fey Ancestry (advantage vs Charm)", "Keen Senses (Perception proficiency)"] },
-      Dwarf: { name: "Dwarf", description: "Stout and resilient defenders, renowned craftspeople and academic physical bulwarks.", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Dwarven Resilience (resistance to poison)", "Dwarven Toughness (+1 max HP per level)"] },
-      Tiefling: { name: "Tiefling", description: "Bearers of a supernatural heritage traced back to planes of fire, shadow, or brimstone.", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Fire Resistance", "Thaumaturgy Cantrip (extra spell)"] }
+      Owlin: { name: "Owlin", description: "Distant kin of giant owls...", size: "Medium", speed: 30, traits: ["Darkvision (120ft)", "Flight", "Silent Feathers"] },
+      Human: { name: "Human", description: "Versatile, curious, and resilient...", size: "Medium", speed: 30, traits: ["Resourceful", "Versatile"] },
+      Elf: { name: "Elf", description: "Graceful and magical folk...", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Fey Ancestry", "Keen Senses"] },
+      Dwarf: { name: "Dwarf", description: "Stout and resilient defenders...", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Dwarven Resilience", "Dwarven Toughness"] },
+      Tiefling: { name: "Tiefling", description: "Bearers of a supernatural heritage...", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Fire Resistance", "Thaumaturgy Cantrip"] }
     };
 
     const CLASSES = {
@@ -116,6 +116,12 @@
     ];
 
     function App() {
+      // --- CLOUD LIBRARY STATES ---
+      const [cloudClasses, setCloudClasses] = useState(CLASSES);
+      const [cloudColleges, setCloudColleges] = useState(COLLEGES);
+      const [cloudLineages, setCloudLineages] = useState(LINEAGES);
+      const [dbLoaded, setDbLoaded] = useState(false);
+
       const [phase, setPhase] = useState(1);
       const [activeSheetTab, setActiveSheetTab] = useState(1);
       const [isSaving, setIsSaving] = useState(false);
@@ -148,6 +154,42 @@
         { name: "Rosie Wirthmore", points: 1, relationship: "Art Class Buddy", isFriend: true, isRival: false }
       ]);
 
+      // --- CLOUD FETCH ENGINE ---
+      useEffect(() => {
+        const fetchLibraries = async () => {
+          if (!window.firebaseDb) return;
+          try {
+            const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+            const db = window.firebaseDb;
+
+            // Pull Colleges
+            const colSnap = await getDocs(collection(db, "colleges"));
+            const fetchedColleges = {};
+            colSnap.forEach(doc => fetchedColleges[doc.id] = doc.data());
+            if (Object.keys(fetchedColleges).length > 0) setCloudColleges(fetchedColleges);
+
+            // Pull Lineages
+            const linSnap = await getDocs(collection(db, "lineages"));
+            const fetchedLineages = {};
+            linSnap.forEach(doc => fetchedLineages[doc.id] = doc.data());
+            if (Object.keys(fetchedLineages).length > 0) setCloudLineages(fetchedLineages);
+
+            // Pull Classes
+            const clsSnap = await getDocs(collection(db, "classes"));
+            const fetchedClasses = {};
+            clsSnap.forEach(doc => fetchedClasses[doc.id] = doc.data());
+            if (Object.keys(fetchedClasses).length > 0) setCloudClasses(fetchedClasses);
+
+            setDbLoaded(true);
+            console.log("✓ Cloud libraries loaded successfully.");
+          } catch (error) {
+            console.error("Error pulling from Firebase:", error);
+          }
+        };
+        
+        fetchLibraries();
+      }, []);
+
       const updateBaseScoresBasedOnClass = (className) => {
         let newBase = { STR: 8, DEX: 12, CON: 13, INT: 10, WIS: 14, CHA: 15 };
         if (className === "Wizard") newBase = { STR: 8, DEX: 13, CON: 14, INT: 15, WIS: 12, CHA: 10 };
@@ -156,7 +198,8 @@
         else if (className === "Druid" || className === "Cleric") newBase = { STR: 10, DEX: 12, CON: 13, INT: 8, WIS: 15, CHA: 14 };
         
         setBaseScores(newBase);
-        const currentPrimary = CLASSES[className]?.primary;
+        // Uses the cloud-loaded classes map
+        const currentPrimary = cloudClasses[className]?.primary;
         let newIncreases = { STR: 0, DEX: 0, CON: 0, INT: 0, WIS: 0, CHA: 0 };
         if (currentPrimary) {
           newIncreases[currentPrimary] = 2;
@@ -167,19 +210,49 @@
 
       useEffect(() => {
         updateBaseScoresBasedOnClass(selectedClass);
-      }, [selectedClass]);
+      }, [selectedClass, cloudClasses]);
 
-      // Math Helpers
+      // Math Helpers (Updated to use Cloud variables)
       const getMod = (stat) => Math.floor((((baseScores[stat] || 10) + (scoreIncreases[stat] || 0)) - 10) / 2);
       const getModStr = (stat) => getMod(stat) >= 0 ? `+${getMod(stat)}` : `${getMod(stat)}`;
       const getTotalScore = (stat) => (baseScores[stat] || 10) + (scoreIncreases[stat] || 0);
       const getAC = () => ["Fighter"].includes(selectedClass) ? 16 : 10 + getMod("DEX");
-      const getMaxHP = () => (CLASSES[selectedClass]?.hitDie || 8) + getMod("CON") + (selectedLineage === "Dwarf" ? 1 : 0);
-      const getSpellSaveDC = () => 10 + getMod(COLLEGES[selectedCollege]?.spellcastingAbility || "INT");
-      const getSpellAttackBonus = () => 2 + getMod(COLLEGES[selectedCollege]?.spellcastingAbility || "INT");
+      const getMaxHP = () => (cloudClasses[selectedClass]?.hitDie || 8) + getMod("CON") + (selectedLineage === "Dwarf" ? 1 : 0);
+      const getSpellSaveDC = () => 10 + getMod(cloudColleges[selectedCollege]?.spellcastingAbility || "INT");
+      const getSpellAttackBonus = () => 2 + getMod(cloudColleges[selectedCollege]?.spellcastingAbility || "INT");
 
       const handleNextPhase = () => { if (phase < 11) setPhase(phase + 1); };
       const handlePrevPhase = () => { if (phase > 1) setPhase(phase - 1); };
+
+      // --- ADMIN SEEDER: PUSH LOCAL LIBRARIES TO CLOUD ---
+      const seedDatabase = async () => {
+        if (!window.firebaseDb) return alert("Database not connected!");
+        
+        try {
+          const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+          const db = window.firebaseDb;
+
+          console.log("Initiating Cloud Matrix upload...");
+
+          // 1. Upload Colleges
+          for (const [key, data] of Object.entries(COLLEGES)) {
+            await setDoc(doc(db, "colleges", key), data);
+          }
+          // 2. Upload Lineages
+          for (const [key, data] of Object.entries(LINEAGES)) {
+            await setDoc(doc(db, "lineages", key), data);
+          }
+          // 3. Upload Classes
+          for (const [key, data] of Object.entries(CLASSES)) {
+            await setDoc(doc(db, "classes", key), data);
+          }
+
+          alert("Library Seeding Complete! Check your Firebase Console under 'Firestore Database'.");
+        } catch (error) {
+          console.error("Seeding Error:", error);
+          alert("Upload failed. Check console.");
+        }
+      };
 
       // --- FIREBASE SUBMISSION LOGIC ---
       const submitToFirebase = async () => {
@@ -187,39 +260,9 @@
           alert("Error: Database disconnected. Ensure you are testing over a live URL.");
           return;
         }
-          // --- ADMIN SEEDER: PUSH LOCAL LIBRARIES TO CLOUD ---
-const seedDatabase = async () => {
-  if (!window.firebaseDb) return alert("Database not connected!");
-  
-  try {
-    const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-    const db = window.firebaseDb;
-
-    console.log("Initiating Cloud Matrix upload...");
-
-    // 1. Upload Colleges
-    for (const [key, data] of Object.entries(COLLEGES)) {
-      await setDoc(doc(db, "colleges", key), data);
-    }
-    // 2. Upload Lineages
-    for (const [key, data] of Object.entries(LINEAGES)) {
-      await setDoc(doc(db, "lineages", key), data);
-    }
-    // 3. Upload Classes
-    for (const [key, data] of Object.entries(CLASSES)) {
-      await setDoc(doc(db, "classes", key), data);
-    }
-
-    alert("Library Seeding Complete! Check your Firebase Console under 'Firestore Database'.");
-  } catch (error) {
-    console.error("Seeding Error:", error);
-    alert("Upload failed. Check console.");
-  }
-};
 
         setIsSaving(true);
         try {
-          // Native Firestore logic exposed from index.html script tag
           const { setDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
           
           const studentPayload = {
@@ -288,13 +331,14 @@ const seedDatabase = async () => {
                 </div>
               )}
 
+              {/* Using Cloud Variables for Lineages */}
               {phase === 3 && (
                 <div className="space-y-4">
                   <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-user mr-2"></i>Phase 3: Species Registry</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    {Object.keys(LINEAGES).map(key => (
+                    {Object.keys(cloudLineages).map(key => (
                       <button key={key} onClick={() => setSelectedLineage(key)} className={`p-4 rounded-xl border text-left ${selectedLineage === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800"}`}>
-                        <p className="font-bold text-amber-400">{LINEAGES[key].name}</p>
+                        <p className="font-bold text-amber-400">{cloudLineages[key].name}</p>
                       </button>
                     ))}
                   </div>
@@ -313,25 +357,27 @@ const seedDatabase = async () => {
                 </div>
               )}
 
+              {/* Using Cloud Variables for Colleges */}
               {phase === 5 && (
                 <div className="space-y-4">
                   <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-book-open mr-2"></i>Phase 5: College Alignment</h3>
-                  {Object.keys(COLLEGES).map(key => (
+                  {Object.keys(cloudColleges).map(key => (
                     <button key={key} onClick={() => setSelectedCollege(key)} className={`w-full p-4 rounded-xl border text-left ${selectedCollege === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
-                      <p className="font-bold">{COLLEGES[key].name}</p>
-                      <p className="text-xs text-slate-400">{COLLEGES[key].motto}</p>
+                      <p className="font-bold">{cloudColleges[key].name}</p>
+                      <p className="text-xs text-slate-400">{cloudColleges[key].motto}</p>
                     </button>
                   ))}
                 </div>
               )}
 
+              {/* Using Cloud Variables for Classes */}
               {phase === 6 && (
                 <div className="space-y-4">
                   <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-medal mr-2"></i>Phase 6: Core Class Selection</h3>
                   <div className="grid grid-cols-2 gap-2">
-                    {Object.keys(CLASSES).map(key => (
+                    {Object.keys(cloudClasses).map(key => (
                       <button key={key} onClick={() => setSelectedClass(key)} className={`p-3 rounded-lg border text-left ${selectedClass === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
-                        <span className="font-bold">{CLASSES[key].name}</span>
+                        <span className="font-bold">{cloudClasses[key].name}</span>
                       </button>
                     ))}
                   </div>
@@ -411,22 +457,22 @@ const seedDatabase = async () => {
               )}
             </div>
 
-           <div className="mt-6 border-t border-slate-800/80 pt-4 flex justify-between items-center">
-  <button onClick={handlePrevPhase} disabled={phase === 1} className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 rounded-lg text-xs font-semibold">Previous</button>
-  
-  {/* SECRET ADMIN SEEDER BUTTON */}
-  <button onClick={seedDatabase} className="px-4 py-2 bg-purple-900 hover:bg-purple-800 text-white rounded-lg text-xs font-semibold">
-    <i className="fa-solid fa-database mr-2"></i> Seed Firestore Libraries
-  </button>
+            <div className="mt-6 border-t border-slate-800/80 pt-4 flex justify-between items-center">
+              <button onClick={handlePrevPhase} disabled={phase === 1} className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 rounded-lg text-xs font-semibold">Previous</button>
+              
+              {/* SECRET ADMIN SEEDER BUTTON */}
+              <button onClick={seedDatabase} className="px-4 py-2 bg-purple-900 hover:bg-purple-800 text-white rounded-lg text-xs font-semibold">
+                <i className="fa-solid fa-database mr-2"></i> Seed Firestore Libraries
+              </button>
 
-  {phase < 11 ? (
-    <button onClick={handleNextPhase} className="px-5 py-2 bg-amber-600 text-white rounded-lg text-xs font-semibold">Next Phase</button>
-  ) : (
-    <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg">
-      <i className="fa-solid fa-cloud-arrow-up mr-2"></i> {isSaving ? "Syncing..." : "Submit to Firebase"}
-    </button>
-  )}
-</div>
+              {phase < 11 ? (
+                <button onClick={handleNextPhase} className="px-5 py-2 bg-amber-600 text-white rounded-lg text-xs font-semibold">Next Phase</button>
+              ) : (
+                <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg">
+                  <i className="fa-solid fa-cloud-arrow-up mr-2"></i> {isSaving ? "Syncing..." : "Submit to Firebase"}
+                </button>
+              )}
+            </div>
           </section>
 
           {/* RIGHT COLUMN: THE LIVE-UPDATING 4-PAGE CHARACTER SHEET PREVIEW */}
