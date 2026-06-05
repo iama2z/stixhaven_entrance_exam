@@ -1,0 +1,127 @@
+{
+  "ArmorAndShields": {
+    "Light Armor": {
+      "calculation": "Base AC + Dexterity modifier",
+      "special": null
+    },
+    "Medium Armor": {
+      "calculation": "Base AC + Dexterity modifier (max +2)",
+      "special": "Wearing Scale Mail or Half Plate imposes Disadvantage on Dexterity (Stealth) checks."
+    },
+    "Heavy Armor": {
+      "calculation": "Flat AC provided by the armor (no Dex modifier)",
+      "special": "Wearing Ring Mail, Chain Mail, Splint, or Plate imposes Disadvantage on Dexterity (Stealth) checks. Speed is reduced by 10 feet if Strength requirement is not met."
+    },
+    "Shields": {
+      "calculation": "+2 bonus to AC",
+      "special": null
+    }
+  },
+  "WeaponCategories": {
+    "Simple Weapons": {
+      "items": ["Club", "Dagger", "Dart", "Handaxe", "Javelin", "Light Crossbow", "Mace", "Quarterstaff", "Shortbow", "Sickle", "Sling"],
+      "description": "Standard weapons requiring no specialized martial training[cite: 4]."
+    },
+    "Martial Weapons": {
+      "items": ["Greataxe", "Greatsword", "Hand Crossbow", "Longbow", "Longsword", "Rapier", "Scimitar", "Shortsword", "Warhammer"],
+      "description": "Advanced weapons requiring specific class proficiencies to wield effectively[cite: 4]."
+    }
+  },
+  "WeaponProperties": {
+    "Finesse": {
+      "effect": "Choose either Strength or Dexterity modifier for attack and damage rolls."
+    },
+    "Heavy": {
+      "effect": "Small creatures (e.g., Halflings, Gnomes) have Disadvantage on attack rolls."
+    },
+    "Thrown": {
+      "effect": "Uses the same ability modifier for attack and damage that you would use for a melee attack."
+    }
+  },
+  "EquipmentPacks": {
+    "Available Packs": {
+      "items": ["Explorer's pack", "Diplomat's pack", "Entertainer's pack", "Priest's pack", "Dungeoneer's pack", "Burglar's pack", "Scholar's pack"],
+      "description": "Pre-bundled sets of adventuring gear granted during character creation based on class and background[cite: 4]."
+    }
+  },
+  "ToolsAndInstruments": {
+    "General Tool Rule": {
+      "benefit": "Add Proficiency Bonus to any ability check made using a tool, kit, or instrument you are proficient with."
+    },
+    "Musical Instruments": {
+      "benefit": "Used for performances and can act as a spellcasting focus for Bards[cite: 4]."
+    },
+    "Artisan's Tools": {
+      "benefit": "Used for crafting and specific trade skills[cite: 4]."
+    },
+    "Thieves' Tools": {
+      "benefit": "Required for picking locks and disarming traps[cite: 4]."
+    },
+    "Herbalism Kit": {
+      "benefit": "Required to craft antitoxins or Potions of Healing[cite: 4]."
+    },
+    "Healer's Kit": {
+      "benefit": "Contains 10 uses; expend 1 use to instantly stabilize a creature at 0 HP without a Medicine check."
+    }
+  },
+  "ClassSpecificGear": {
+    "Arcane Focus": {
+      "description": "A crystal, orb, rod, or wand used to channel magic for Sorcerers, Warlocks, and Wizards[cite: 4]."
+    },
+    "Druidic Focus": {
+      "description": "A sprig of mistletoe, totem, or wooden staff used specifically by Druids[cite: 4]."
+    },
+    "Holy Symbol": {
+      "description": "An amulet or emblem used to channel divine magic for Clerics and Paladins[cite: 4]."
+    },
+    "Component Pouch": {
+      "description": "A pouch holding physical materials required for casting spells, serving as an alternative to a spellcasting focus[cite: 4]."
+    },
+    "Spellbook": {
+      "description": "A critical item for Wizards to record, store, and prepare their spells[cite: 4]."
+    }
+  },
+  "AdventuringGear": {
+    "Crowbar": {
+      "benefit": "Advantage on Strength checks where leverage can be applied."
+    },
+    "Portable Ram": {
+      "benefit": "+4 bonus to Strength checks to break down doors; Advantage if assisted by another character."
+    },
+    "Magnifying Glass": {
+      "benefit": "Advantage on ability checks to appraise or inspect small or highly detailed items."
+    },
+    "Block and Tackle": {
+      "benefit": "Allows you to hoist up to four times your normal lifting weight."
+    }
+  },
+  "StrixhavenSpecial": {
+    "Base College Package": {
+      "benefit": "All students receive a school uniform, writing supplies, 10gp, and their college-specific textbook[cite: 3]."
+    },
+    "Star Performer Kit": {
+      "benefit": "Contains custom instruments, premium paints/inks, and performance supplies[cite: 3]."
+    },
+    "Stealthy Archivist Kit": {
+      "benefit": "Contains a hooded lantern, steel mirror, and durable backpack[cite: 3]."
+    },
+    "Practical Survivalist Kit": {
+      "benefit": "Contains tents, ropes, field rations, and emergency gear[cite: 3]."
+    },
+    "College Primers": {
+      "benefit": "Holds 3 charges. Expend 1 charge for a 1d4 bonus to college-tied skill checks. Allows casting of one 1st-level class spell once per long rest without a slot."
+    },
+    "Cuddly Strixhaven Mascot": {
+      "benefit": "Can be used to automatically succeed on a failed saving throw to avoid the frightened condition."
+    },
+    "The Student Die": {
+      "benefit": "Grants a 1d4 bonus die to specific skill checks tied to your campus club or job[cite: 3]."
+    },
+    "Strixhaven Pennant": {
+      "benefit": "Sheds bright light in a 10-foot radius and dim light for an additional 10 feet when waved."
+    },
+    "Bottle of Boundless Coffee": {
+      "benefit": "Provides coffee that is always comfortably warm and never runs out."
+    }
+  }
+}
