@@ -1,14 +1,68 @@
 {
-  "Strixhaven Initiate": {
-    "source": "Automatically gained via a Strixhaven College Background.[cite: 8]",
-    "cantrips": "You learn two cantrips from the spell list associated with your chosen college.[cite: 8]",
-    "spells": "You learn one 1st-level spell from your college’s list. You can cast it once without a spell slot per long rest, or use available spell slots to cast it.[cite: 8]",
-    "spellcastingAbility": "You choose Intelligence, Wisdom, or Charisma as your spellcasting ability for these spells.[cite: 8]"
+  "Alert": {
+    "type": "Origin",
+    "proficiencies": [],
+    "mechanics": "Add your Proficiency Bonus to your Initiative roll.",
+    "play_changes": "Initiative Swap: Immediately after rolling, I can swap my initiative number with one willing ally in the same combat."
   },
-  "Strixhaven Mascot": {
-    "prerequisite": "4th level, Strixhaven Initiate feat.[cite: 8]",
-    "summoning": "You can cast the Find Familiar spell to summon a mascot associated with your college: a Spirit Statue (Lorehold), Art Elemental (Prismari), Fractal (Quandrix), Inkling (Silverquill), or Pest (Witherbloom).[cite: 8]",
-    "tacticalTeleport": "As a bonus action, you can teleport to swap places with your mascot if it is within 60 feet.[cite: 8]",
-    "attackAction": "When you take the Attack action, you can forgo one of your attacks to allow your mascot to use its reaction to make one attack.[cite: 8]"
+  "Crafter": {
+    "type": "Origin",
+    "proficiencies": ["Three specific Artisan's Tools"],
+    "mechanics": "",
+    "play_changes": "20% discount when buying nonmagical items. Fast Crafting: Can craft one piece of gear from the Fast Crafting table during a Long Rest."
+  },
+  "Healer": {
+    "type": "Origin",
+    "proficiencies": [],
+    "mechanics": "",
+    "play_changes": "Battle Medic: As a Utilize action, I can use a Healer's Kit to heal a creature within 5 ft. They roll one of their unspent Hit Point Dice; they heal that amount + my Proficiency Bonus. Healing Rerolls: Whenever I roll a die to heal someone (via spell or Battle Medic), I can reroll 1s, but I must use the new roll."
+  },
+  "Lucky": {
+    "type": "Origin",
+    "proficiencies": [],
+    "mechanics": "Resource Pool: Write down a pool of Luck Points equal to your Proficiency Bonus (recharges on a Long Rest).",
+    "play_changes": "Spend 1 Luck Point to give myself Advantage on a d20 roll, OR spend 1 point to impose Disadvantage on an attack roll made against me."
+  },
+  "Magic Initiate": {
+    "type": "Origin",
+    "proficiencies": [],
+    "mechanics": "Spells Known: Two Cantrips and one 1st-level spell chosen from either the Cleric, Druid, or Wizard spell list.",
+    "play_changes": "Write down your chosen spellcasting ability for these spells (Intelligence, Wisdom, or Charisma). I can cast the 1st-level spell once for free per Long Rest. I can also cast it using my normal spell slots."
+  },
+  "Musician": {
+    "type": "Origin",
+    "proficiencies": ["Three Musical Instruments"],
+    "mechanics": "",
+    "play_changes": "Encouraging Song: After finishing a Short or Long rest, I can play a song to give Heroic Inspiration to a number of allies equal to my Proficiency Bonus."
+  },
+  "Savage Attacker": {
+    "type": "Origin",
+    "proficiencies": [],
+    "mechanics": "",
+    "play_changes": "Once per turn when I hit a target with a weapon, I can roll the weapon's damage dice twice and use either result."
+  },
+  "Skilled": {
+    "type": "Origin",
+    "proficiencies": ["Any combination of three Skills or Tools"],
+    "mechanics": "",
+    "play_changes": ""
+  },
+  "Tavern Brawler": {
+    "type": "Origin",
+    "proficiencies": ["Improvised Weapons"],
+    "mechanics": "Unarmed Strike Damage: Write down your unarmed strike damage as 1d4 + your Strength modifier.",
+    "play_changes": "Reroll 1s on unarmed strike damage dice. Once per turn, if I hit with an unarmed strike as part of the Attack action, I can push the target 5 feet away."
+  },
+  "Tough": {
+    "type": "Origin",
+    "proficiencies": [],
+    "mechanics": "Hit Point Maximum: Immediately increase your Max HP by an amount equal to twice your character level.",
+    "play_changes": "Every time I level up, my Hit Point Maximum increases by an additional +2."
+  },
+  "Strixhaven Initiate": {
+    "type": "Origin",
+    "proficiencies": [],
+    "mechanics": "Spells Known: Two Cantrips and one 1st-level spell designated by your specific Strixhaven College (e.g., Witherbloom grants Chill Touch, Druidcraft, and Cure Wounds or Inflict Wounds).",
+    "play_changes": "Write down your chosen spellcasting ability (Intelligence, Wisdom, or Charisma). You can cast the 1st-level spell once for free per Long Rest, and you can also cast it using your normal spell slots."
   }
 }
