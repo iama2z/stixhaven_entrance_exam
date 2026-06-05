@@ -1,0 +1,42 @@
+{
+  "Common": {
+    "name": "Common",
+    "type": "Standard",
+    "description": "Universal campus discourse and administrative documentation.[cite: 7]"
+  },
+  "Dwarvish": {
+    "name": "Dwarvish",
+    "type": "Standard",
+    "description": "Dwarves; technical, featuring hard consonants and guttural phonetics.[cite: 7]"
+  },
+  "Elvish": {
+    "name": "Elvish",
+    "type": "Standard",
+    "description": "Elves; fluid, melodic intonations with intricate grammatical structures.[cite: 7]"
+  },
+  "Halfling": {
+    "name": "Halfling",
+    "type": "Standard",
+    "description": "Halflings; primarily an oral tradition with limited formal literature.[cite: 7]"
+  },
+  "Gnomish": {
+    "name": "Gnomish",
+    "type": "Standard",
+    "description": "Gnomes; the preferred tongue for technical and alchemical treatises.[cite: 7]"
+  },
+  "Draconic": {
+    "name": "Draconic",
+    "type": "Exotic",
+    "description": "Dragons and Dragonborn; ancient, harsh, and sibilant.[cite: 7]"
+  },
+  "Orc": {
+    "name": "Orc",
+    "type": "Exotic",
+    "description": "Orcs; grating phonetics; traditionally utilizes the Dwarvish script.[cite: 7]"
+  },
+  "Infernal": {
+    "name": "Infernal",
+    "type": "Exotic",
+    "description": "Tieflings and extraplanar entities; precise and legalistic.[cite: 7]"
+  }
+}
