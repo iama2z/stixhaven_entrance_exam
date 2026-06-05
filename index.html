@@ -187,6 +187,35 @@
           alert("Error: Database disconnected. Ensure you are testing over a live URL.");
           return;
         }
+          // --- ADMIN SEEDER: PUSH LOCAL LIBRARIES TO CLOUD ---
+const seedDatabase = async () => {
+  if (!window.firebaseDb) return alert("Database not connected!");
+  
+  try {
+    const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+    const db = window.firebaseDb;
+
+    console.log("Initiating Cloud Matrix upload...");
+
+    // 1. Upload Colleges
+    for (const [key, data] of Object.entries(COLLEGES)) {
+      await setDoc(doc(db, "colleges", key), data);
+    }
+    // 2. Upload Lineages
+    for (const [key, data] of Object.entries(LINEAGES)) {
+      await setDoc(doc(db, "lineages", key), data);
+    }
+    // 3. Upload Classes
+    for (const [key, data] of Object.entries(CLASSES)) {
+      await setDoc(doc(db, "classes", key), data);
+    }
+
+    alert("Library Seeding Complete! Check your Firebase Console under 'Firestore Database'.");
+  } catch (error) {
+    console.error("Seeding Error:", error);
+    alert("Upload failed. Check console.");
+  }
+};
 
         setIsSaving(true);
         try {
@@ -382,16 +411,22 @@
               )}
             </div>
 
-            <div className="mt-6 border-t border-slate-800/80 pt-4 flex justify-between items-center">
-              <button onClick={handlePrevPhase} disabled={phase === 1} className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 rounded-lg text-xs font-semibold">Previous</button>
-              {phase < 11 ? (
-                <button onClick={handleNextPhase} className="px-5 py-2 bg-amber-600 text-white rounded-lg text-xs font-semibold">Next Phase</button>
-              ) : (
-                <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg">
-                  <i className="fa-solid fa-cloud-arrow-up mr-2"></i> {isSaving ? "Syncing..." : "Submit to Firebase"}
-                </button>
-              )}
-            </div>
+           <div className="mt-6 border-t border-slate-800/80 pt-4 flex justify-between items-center">
+  <button onClick={handlePrevPhase} disabled={phase === 1} className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 rounded-lg text-xs font-semibold">Previous</button>
+  
+  {/* SECRET ADMIN SEEDER BUTTON */}
+  <button onClick={seedDatabase} className="px-4 py-2 bg-purple-900 hover:bg-purple-800 text-white rounded-lg text-xs font-semibold">
+    <i className="fa-solid fa-database mr-2"></i> Seed Firestore Libraries
+  </button>
+
+  {phase < 11 ? (
+    <button onClick={handleNextPhase} className="px-5 py-2 bg-amber-600 text-white rounded-lg text-xs font-semibold">Next Phase</button>
+  ) : (
+    <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg">
+      <i className="fa-solid fa-cloud-arrow-up mr-2"></i> {isSaving ? "Syncing..." : "Submit to Firebase"}
+    </button>
+  )}
+</div>
           </section>
 
           {/* RIGHT COLUMN: THE LIVE-UPDATING 4-PAGE CHARACTER SHEET PREVIEW */}
