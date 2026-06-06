@@ -44,6 +44,8 @@
     // Expose database utilities to the global window so React can access them
     window.firebaseDb = db;
     window.firebaseAuth = auth;
+    window.firestoreDoc = doc;
+    window.firestoreSetDoc = setDoc;
 
     // Run silent player authentication on page load
     async function initializePlayerSession() {
@@ -449,8 +451,9 @@
       const seedDatabase = async () => {
         if (!window.firebaseDb) return alert("Database not connected!");
         try {
-          const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
           const db = window.firebaseDb;
+          const doc = window.firestoreDoc;
+          const setDoc = window.firestoreSetDoc;
           for (const [key, data] of Object.entries(COLLEGES))  await setDoc(doc(db, "colleges",  key), data);
           for (const [key, data] of Object.entries(LINEAGES))  await setDoc(doc(db, "lineages",  key), data);
           for (const [key, data] of Object.entries(CLASSES))   await setDoc(doc(db, "classes",   key), data);
@@ -462,7 +465,8 @@
         if (!window.firebaseDb || !window.studentUid) { alert("Database disconnected."); return; }
         setIsSaving(true);
         try {
-          const { setDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+          const setDoc = window.firestoreSetDoc;
+          const doc = window.firestoreDoc;
           await setDoc(doc(window.firebaseDb, "student_enrollments", window.studentUid), {
             characterName, playerName, selectedLineage, selectedSize, selectedCollege, selectedClass,
             selectedClub, selectedStipend, selectedTool, selectedWeapon, alignment,
