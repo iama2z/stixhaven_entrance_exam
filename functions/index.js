@@ -97,6 +97,7 @@ exports.strixhavenConsultant = onCall(
         const parsed = JSON.parse(responseText);
         return parsed;
       } catch (e) {
+        console.warn("Failed to parse AI JSON response:", e.message, "Raw:", responseText.substring(0, 200));
         return {
           proctorMessage: responseText,
           systemUpdates: {},
