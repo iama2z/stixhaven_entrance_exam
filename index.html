@@ -43,14 +43,15 @@
     window.firestoreDoc = doc;
     window.firestoreSetDoc = setDoc;
 
-    // NEW: Create global AI helper for React to use
+    // AI helper: sends chatHistory, latest message, and game data to the Cloud Function
     const askStrixhavenConsultant = httpsCallable(functions, 'strixhavenConsultant');
-    window.askAdmissionsAI = async (playerQuestion, categoryFile) => {
+    window.askAdmissionsAI = async (chatHistory, latestMessage, gameData) => {
         const result = await askStrixhavenConsultant({ 
-            playerPrompt: playerQuestion, 
-            jsonCategory: categoryFile 
+            chatHistory,
+            latestMessage,
+            gameData
         });
-        return result.data.response;
+        return result.data;
     };
 
     async function initializePlayerSession() {
@@ -282,16 +283,12 @@
       const [activeSheetTab, setActiveSheetTab] = useState(1);
       const [isSaving, setIsSaving] = useState(false);
 
-      // View toggle: 'exam' | 'chat'
-      const [view, setView] = useState('exam');
-
-      // Interactive Chat State
-      const [chatHistory, setChatHistory] = useState([
-        { role: 'proctor', text: 'Welcome to the Strixhaven Biblioplex Consultation Chamber. I am your Admissions Proctor. Ask me anything about your enrollment — classes, colleges, spells, or any phase of your character creation.' }
-      ]);
+      // Interactive Chat State — sole driver of the app
+      const [chatHistory, setChatHistory] = useState([]);
       const [chatInput, setChatInput] = useState('');
       const [isChatLoading, setIsChatLoading] = useState(false);
       const chatEndRef = useRef(null);
+      const hasInitialized = useRef(false);
 
       // Phases State
       const [selectedLineage, setSelectedLineage] = useState("Human");
@@ -300,7 +297,6 @@
       const [selectedCollege, setSelectedCollege] = useState("Prismari");
       const [selectedClub, setSelectedClub] = useState("Fine Artists");
       const [statAssignments, setStatAssignments] = useState({ STR: null, DEX: null, CON: null, INT: null, WIS: null, CHA: null });
-      const [pendingValue, setPendingValue] = useState(null);
       const [selectedTool, setSelectedTool] = useState("");
       const [selectedStipend, setSelectedStipend] = useState("Star Performer");
       const [selectedWeapon, setSelectedWeapon] = useState("");
@@ -315,7 +311,6 @@
       const [characterName, setCharacterName] = useState("");
       const [playerName, setPlayerName] = useState("");
       const [backstory, setBackstory] = useState("");
-      const [showNameBuckets, setShowNameBuckets] = useState(false);
       const [customJobs] = useState({ employer: "Firejolt Café", coworker: "Tavern Keep" });
       const [npcRelationships] = useState([{ name: "Rosie Wirthmore", points: 1, relationship: "Art Class Buddy" }]);
 
@@ -330,39 +325,52 @@
       const getSpellSaveDC = () => 8 + 2 + getMod(getSpellAbility());
       const getSpellAtk    = () => { const m = getMod(getSpellAbility()); return m >= 0 ? `+${2 + m}` : `${2 + m}`; };
 
-      const getAvailableValues = () => {
-        const used = [];
-        for (const v of Object.values(statAssignments)) { if (v !== null) used.push(v); }
-        return STANDARD_ARRAY.filter(v => {
-          const i = used.indexOf(v);
-          if (i !== -1) { used.splice(i, 1); return false; }
-          return true;
-        });
-      };
-
-      const handleValueChip = (val) => setPendingValue(pendingValue === val ? null : val);
-      const handleStatBox = (stat) => {
-        if (pendingValue !== null) {
-          const old = statAssignments[stat];
-          setStatAssignments({ ...statAssignments, [stat]: pendingValue });
-          setPendingValue(old);
-        } else if (statAssignments[stat] !== null) {
-          setStatAssignments({ ...statAssignments, [stat]: null });
+      // Get relevant game data for current phase to send to AI
+      const getGameDataForPhase = (phaseNum) => {
+        switch (phaseNum) {
+          case 1: return { lineages: LINEAGES };
+          case 2: return { classes: CLASSES };
+          case 3: return { colleges: COLLEGES };
+          case 4: return { clubs: CLUBS };
+          case 5: return { standardArray: STANDARD_ARRAY, statLabels: STAT_LABELS, currentClass: selectedClass, classPrimary: CLASSES[selectedClass]?.primary };
+          case 6: return { tools: TOOLS_BY_CLASS[selectedClass] || { label: "Tool / Kit", options: [] } };
+          case 7: return { stipendKits: STIPEND_KITS, weapons: CLASSES[selectedClass]?.weapons || [] };
+          case 8: return { spells: SPELLS_BY_RESONANCE, currentClass: selectedClass, currentCollege: selectedCollege };
+          case 9: return { skills: SKILL_LIST, currentClass: selectedClass };
+          case 10: return { alignments: ALIGNMENTS, flawsByStat: FLAWS_BY_STAT, lowestStat: getLowestStat() };
+          case 11: return { nameBuckets: NAME_BUCKETS, currentLineage: selectedLineage, currentCollege: selectedCollege };
+          default: return {};
         }
       };
 
-      const getStatHints = () => {
-        if (!allAssigned()) return [];
-        const hints = [];
-        const primary = CLASSES[selectedClass]?.primary;
-        const spellAbility = getSpellAbility();
-        for (const stat of Object.keys(statAssignments)) {
-          const score = statAssignments[stat];
-          if (stat === primary && score >= 15) hints.push({ type: "star",    text: `⭐ ${STAT_LABELS[stat]} ${score} (${getModStr(stat)}) — Exceptional primary attribute for ${selectedClass}! Your spells will hit harder.` });
-          else if (stat === spellAbility && stat !== primary && score >= 14) hints.push({ type: "college", text: `🎓 ${STAT_LABELS[stat]} ${score} (${getModStr(stat)}) — Strong spellcasting stat for ${selectedCollege} college.` });
-          if (score <= 8) hints.push({ type: "warning", text: `⚠️ ${STAT_LABELS[stat]} ${score} (${getModStr(stat)}) — Proctor Alert: This will create significant vulnerabilities in ${stat === "DEX" ? "ranged/stealth situations" : stat === "CON" ? "hit points and concentration checks" : "related skill checks"}.` });
+      // Apply system updates from AI response to React state
+      const applySystemUpdates = (updates) => {
+        if (!updates) return;
+        if (updates.nextPhaseNumber != null) {
+          const p = Math.max(1, Math.min(11, updates.nextPhaseNumber));
+          setPhase(p);
         }
-        return hints;
+        if (updates.selectedLineage != null) {
+          setSelectedLineage(updates.selectedLineage);
+          const lin = LINEAGES[updates.selectedLineage];
+          if (lin) setSelectedSize(updates.selectedSize || lin.sizeOptions[0]);
+        }
+        if (updates.selectedSize != null) setSelectedSize(updates.selectedSize);
+        if (updates.selectedClass != null) setSelectedClass(updates.selectedClass);
+        if (updates.selectedCollege != null) setSelectedCollege(updates.selectedCollege);
+        if (updates.selectedClub != null) setSelectedClub(updates.selectedClub);
+        if (updates.statAssignments != null) setStatAssignments(prev => ({ ...prev, ...updates.statAssignments }));
+        if (updates.selectedTool != null) setSelectedTool(updates.selectedTool);
+        if (updates.selectedStipend != null) setSelectedStipend(updates.selectedStipend);
+        if (updates.selectedWeapon != null) setSelectedWeapon(updates.selectedWeapon);
+        if (updates.resonanceType != null) setResonanceType(updates.resonanceType);
+        if (updates.selectedSpells != null) setSelectedSpells(updates.selectedSpells);
+        if (updates.selectedSkills != null) setSelectedSkills(updates.selectedSkills);
+        if (updates.alignment != null) setAlignment(updates.alignment);
+        if (updates.flaw != null) setFlaw(updates.flaw);
+        if (updates.characterName != null) setCharacterName(updates.characterName);
+        if (updates.playerName != null) setPlayerName(updates.playerName);
+        if (updates.backstory != null) setBackstory(updates.backstory);
       };
 
       const getLowestStat = () => {
@@ -374,50 +382,31 @@
       };
 
       useEffect(() => {
-        const low = getLowestStat();
-        if (low && FLAWS_BY_STAT[low]) setFlaw(FLAWS_BY_STAT[low]);
-      }, [phase]);
-
-      useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, [chatHistory, isChatLoading]);
 
-      useEffect(() => { setSelectedWeapon(""); setSelectedTool(""); }, [selectedClass]);
-
-      const getSpellsForClass = (resonance) => {
-        if (!resonance) return [];
-        return SPELLS_BY_RESONANCE[resonance].filter(s => s.classes.includes(selectedClass) || s.classes.includes(selectedCollege) || s.classes.includes("All"));
-      };
-
-      const getProctorSpellHint = (resonance) => {
-        const dexMod = getMod("DEX"); const conMod = getMod("CON");
-        if (!resonance) return null;
-        if (resonance === "Destruction") return dexMod <= -1 ? "⚠️ Proctor Tip: With low Dexterity, avoid front-line melee confrontations. Prioritize long-range spells and elevation." : "⭐ Proctor Tip: Destruction spells scale with your spellcasting modifier. Prioritize your highest stat for maximum impact.";
-        if (resonance === "Control") return conMod <= -1 ? "⚠️ Proctor Tip: Concentration spells are risky with low Constitution. Prioritize non-concentration control spells like Thunderwave to stay mobile." : "🎓 Proctor Tip: Control spells can turn the entire course of an encounter. One well-placed Entangle can neutralize a whole flank.";
-        return "✨ Proctor Tip: Support spells create cascading advantages for your entire party. A well-timed Bless can be worth more than any damage spell.";
-      };
-
-      const ACADEMIC_SKILLS = new Set(["Arcana", "History", "Investigation", "Insight", "Perception", "Religion", "Nature"]);
-      const getSkillTier = (skill) => {
-        const mod = getMod(skill.stat);
-        if (mod >= 2) return "star";
-        if (ACADEMIC_SKILLS.has(skill.name)) return "academic";
-        return mod <= -1 ? "risk" : "neutral";
-      };
-
-      const tierLabel = { star: "⭐ Optimal — High Stat Synergy", academic: "🧠 Solid Academic", risk: "⚠️ High-Risk — Stat Penalty", neutral: "Balanced" };
-      const tierOrder = ["star", "academic", "neutral", "risk"];
-
-      const seedDatabase = async () => {
-        if (!window.firebaseDb) return alert("Database not connected!");
-        try {
-          const db = window.firebaseDb; const doc = window.firestoreDoc; const setDoc = window.firestoreSetDoc;
-          for (const [key, data] of Object.entries(COLLEGES))  await setDoc(doc(db, "colleges",  key), data);
-          for (const [key, data] of Object.entries(LINEAGES))  await setDoc(doc(db, "lineages",  key), data);
-          for (const [key, data] of Object.entries(CLASSES))   await setDoc(doc(db, "classes",   key), data);
-          alert("Library Seeding Complete!");
-        } catch (e) { console.error(e); alert("Upload failed. Check console."); }
-      };
+      // Auto-start conversation on load
+      useEffect(() => {
+        if (hasInitialized.current) return;
+        hasInitialized.current = true;
+        
+        const initConversation = async () => {
+          setIsChatLoading(true);
+          const initPrompt = "Introduce yourself as the Proctor and ask the Phase 1 question.";
+          const gameData = getGameDataForPhase(1);
+          try {
+            const response = await window.askAdmissionsAI([], initPrompt, gameData);
+            const proctorMsg = response.proctorMessage || response;
+            setChatHistory([{ role: 'proctor', text: proctorMsg }]);
+            if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
+          } catch (err) {
+            console.error("Init error:", err);
+            setChatHistory([{ role: 'proctor', text: 'Welcome to the Strixhaven Biblioplex. I am your Admissions Proctor. Let us begin your entrance exam. How do you perceive your place in the multiverse? A) Through your own keen senses (Owlin) B) By observing the flow of magic (Elf/Gnome) C) Through connections with others (Human/Tiefling) D) By enduring hardship (Dwarf/Orc)' }]);
+          }
+          setIsChatLoading(false);
+        };
+        initConversation();
+      }, []);
 
       const submitToFirebase = async () => {
         if (!window.firebaseDb || !window.studentUid) { alert("Database disconnected."); return; }
@@ -434,25 +423,22 @@
         setIsSaving(false);
       };
 
-      const handleNext = () => { if (phase < 11) setPhase(phase + 1); };
-      const handlePrev = () => { if (phase > 1)  setPhase(phase - 1); };
-
-      // Handle Interactive Exam Chat submission
+      // Handle Interactive Exam Chat submission — sole driver of the app
       const handleChatSubmit = async () => {
         if (!chatInput.trim() || isChatLoading) return;
         const userMsg = chatInput.trim();
         setChatInput('');
-        setChatHistory(prev => [...prev, { role: 'user', text: userMsg }]);
+        const newHistory = [...chatHistory, { role: 'user', text: userMsg }];
+        setChatHistory(newHistory);
         setIsChatLoading(true);
 
-        let targetFile = 'backgrounds';
-        if (phase === 2) targetFile = 'classes';
-        else if (phase === 3) targetFile = 'colleges';
-        else if (phase === 8) targetFile = 'spells';
+        const gameData = getGameDataForPhase(phase);
 
         try {
-          const answer = await window.askAdmissionsAI(userMsg, targetFile);
-          setChatHistory(prev => [...prev, { role: 'proctor', text: answer }]);
+          const response = await window.askAdmissionsAI(newHistory, userMsg, gameData);
+          const proctorMsg = response.proctorMessage || 'The Proctor nods thoughtfully...';
+          setChatHistory(prev => [...prev, { role: 'proctor', text: proctorMsg }]);
+          if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
         } catch {
           setChatHistory(prev => [...prev, { role: 'proctor', text: 'The Biblioplex archives are currently unreachable. Please try again later.' }]);
         }
@@ -469,7 +455,7 @@
                     <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
                   </div>
                 )}
-                <div className={`max-w-[80%] px-3 py-2 rounded-xl text-xs leading-relaxed ${
+                <div className={`max-w-[80%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
                   msg.role === 'user'
                     ? 'bg-amber-500/20 border border-amber-500/30 text-amber-100 rounded-tr-sm'
                     : 'bg-indigo-950/60 border border-indigo-500/20 text-indigo-100 rounded-tl-sm'
@@ -502,7 +488,7 @@
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
-              placeholder="Ask the Admissions Proctor…"
+              placeholder="Speak to the Admissions Proctor…"
               className="flex-1 bg-slate-950 border border-indigo-900/50 rounded-lg px-3 py-2 text-xs text-indigo-100 focus:border-indigo-500 outline-none placeholder:text-indigo-800"
             />
             <button
@@ -515,274 +501,6 @@
           </div>
         </>
       );
-
-      const renderPhase = () => {
-        const lineage  = LINEAGES[selectedLineage]  || {};
-        const cls      = CLASSES[selectedClass]     || {};
-        const college  = COLLEGES[selectedCollege]  || {};
-        const club     = CLUBS[selectedClub]        || {};
-        const toolData = TOOLS_BY_CLASS[selectedClass] || { label: "Tool / Kit", options: [] };
-
-        switch (phase) {
-          case 1: return (
-            <div className="space-y-4">
-              <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
-                "Welcome, prospective student. Before we can proceed with your academic evaluation, the university registry requires that we document your biological lineage."
-              </div>
-              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-dna mr-2"></i>Phase 1: Core Lineage & Size</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {Object.keys(LINEAGES).map(key => (
-                  <button key={key} onClick={() => { setSelectedLineage(key); const l = LINEAGES[key]; setSelectedSize(l.sizeOptions[0]); }}
-                    className={`p-3 rounded-xl border text-left transition-all ${selectedLineage === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 hover:border-amber-500/40"}`}>
-                    <p className="font-bold text-amber-400 text-xs">{key}</p>
-                    <p className="text-[9px] text-slate-400 mt-0.5">{LINEAGES[key].sizeOptions.join(" / ")}</p>
-                  </button>
-                ))}
-              </div>
-              {lineage.sizeOptions && lineage.sizeOptions.length > 1 && (
-                <div>
-                  <p className="text-xs text-amber-300 font-semibold mb-2">Select Physical Scale:</p>
-                  <div className="flex gap-2">
-                    {lineage.sizeOptions.map(sz => (
-                      <button key={sz} onClick={() => setSelectedSize(sz)}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold border ${selectedSize === sz ? "bg-amber-500/20 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-400"}`}>
-                        {sz}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {lineage.traits && (
-                <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700 space-y-1.5">
-                  <p className="text-[10px] uppercase font-bold text-amber-500 tracking-wider">Species Traits</p>
-                  {lineage.traits.map((t, i) => <p key={i} className="text-xs text-slate-300">• {t}</p>)}
-                </div>
-              )}
-            </div>
-          );
-          case 2: return (
-            <div className="space-y-4">
-              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-medal mr-2"></i>Phase 2: Core Class Selection</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {Object.keys(CLASSES).map(key => {
-                  const c = CLASSES[key];
-                  return (
-                    <button key={key} onClick={() => setSelectedClass(key)}
-                      className={`p-3 rounded-xl border text-left transition-all ${selectedClass === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 hover:border-amber-500/40"}`}>
-                      <p className="font-bold text-amber-400 text-xs">{c.name}</p>
-                      <p className="text-[9px] text-slate-500">d{c.hitDie} HP · {c.primary} primary</p>
-                    </button>
-                  );
-                })}
-              </div>
-              {cls.name && (
-                <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700 space-y-1.5">
-                  <p className="text-[10px] uppercase font-bold text-amber-500 tracking-wider">{cls.name} — Class Details</p>
-                  <p className="text-xs text-slate-300">• Primary Attribute: {STAT_LABELS[cls.primary]}</p>
-                  <p className="text-xs text-slate-300">• Saving Throws: {cls.saves.map(s => STAT_LABELS[s]).join(", ")}</p>
-                  <p className="text-xs text-slate-400 italic mt-1">{cls.description}</p>
-                </div>
-              )}
-            </div>
-          );
-          case 3: return (
-            <div className="space-y-4">
-              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-book-open mr-2"></i>Phase 3: Campus College Alignment</h3>
-              <div className="space-y-2">
-                {Object.keys(COLLEGES).map(key => {
-                  const c = COLLEGES[key];
-                  return (
-                    <button key={key} onClick={() => setSelectedCollege(key)}
-                      className={`w-full p-3 rounded-xl border text-left transition-all ${selectedCollege === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 hover:border-amber-500/40"}`}>
-                      <div className="flex items-center gap-2">
-                        <i className={`fa-solid ${c.icon} text-amber-400 w-4`}></i>
-                        <p className="font-bold text-amber-400 text-xs">{c.name}</p>
-                      </div>
-                      <p className="text-[10px] text-slate-400 italic mt-0.5 ml-6">"{c.motto}"</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-          case 4: return (
-            <div className="space-y-4">
-              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-users mr-2"></i>Phase 4: Extracurricular Activities</h3>
-              <div className="space-y-2">
-                {Object.keys(CLUBS).map(key => {
-                  const c = CLUBS[key];
-                  return (
-                    <button key={key} onClick={() => setSelectedClub(key)}
-                      className={`w-full p-3 rounded-xl border text-left transition-all ${selectedClub === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 hover:border-amber-500/40"}`}>
-                      <p className="font-bold text-xs">{c.name}</p>
-                      <p className="text-[10px] text-emerald-400 mt-0.5">Bonus Skills: {c.skills.join(", ")} · Contact: {c.npc}</p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          );
-          case 5: {
-            const available = getAvailableValues();
-            const hints = getStatHints();
-            return (
-              <div className="space-y-4">
-                <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-table-cells mr-2"></i>Phase 5: Attribute Matrix</h3>
-                <div>
-                  <div className="flex gap-2 flex-wrap mb-2">
-                    {STANDARD_ARRAY.map((val, i) => {
-                      const used = Object.values(statAssignments).filter(v => v === val).length;
-                      const total = STANDARD_ARRAY.filter(v => v === val).length;
-                      if (used >= total) return null;
-                      return (
-                        <button key={i} onClick={() => handleValueChip(val)}
-                          className={`w-10 h-10 rounded-lg font-bold text-sm border-2 transition-all ${pendingValue === val ? "bg-amber-500 border-amber-300 text-slate-900 scale-110" : "bg-slate-800 border-slate-600 text-amber-200 hover:border-amber-500"}`}>
-                          {val}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  {["STR","DEX","CON","INT","WIS","CHA"].map(stat => {
-                    const val = statAssignments[stat];
-                    const isPrimary = CLASSES[selectedClass]?.primary === stat;
-                    return (
-                      <button key={stat} onClick={() => handleStatBox(stat)}
-                        className={`p-3 rounded-xl border-2 text-center transition-all cursor-pointer ${isPrimary ? "border-amber-500/60" : "border-slate-700"} ${val !== null ? "bg-slate-800" : "bg-slate-900/50"}`}>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase block">{stat}{isPrimary ? " ★" : ""}</span>
-                        {val !== null ? <span className="text-xl font-extrabold text-amber-300 block">{val}</span> : <span className="text-xl text-slate-600 block">—</span>}
-                      </button>
-                    );
-                  })}
-                </div>
-                {hints.map((h, i) => (
-                  <div key={i} className={`p-2 rounded-lg text-xs ${h.type === "warning" ? "bg-red-950/40 border border-red-500/30 text-red-200" : h.type === "star" ? "bg-amber-950/40 border border-amber-500/30 text-amber-200" : "bg-teal-950/40 border border-teal-500/30 text-teal-200"}`}>
-                    {h.text}
-                  </div>
-                ))}
-              </div>
-            );
-          }
-          case 6: return (
-            <div className="space-y-4">
-              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-wrench mr-2"></i>Phase 6: Specialized Tool</h3>
-              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700">
-                <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">{toolData.label}</p>
-                <div className="flex flex-wrap gap-2">
-                  {toolData.options.map(opt => (
-                    <button key={opt} onClick={() => setSelectedTool(opt)}
-                      className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${selectedTool === opt ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-950 border-slate-700 text-slate-400 hover:border-amber-500/40"}`}>
-                      {opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          );
-          case 7: return (
-            <div className="space-y-4">
-              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-briefcase mr-2"></i>Phase 7: Equipment</h3>
-              <div>
-                <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">Stipend Kit Selection</p>
-                {Object.keys(STIPEND_KITS).map(key => (
-                  <button key={key} onClick={() => setSelectedStipend(key)}
-                    className={`w-full p-3 rounded-xl border text-left mb-2 transition-all ${selectedStipend === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 hover:border-amber-500/40"}`}>
-                    <p className="font-bold text-xs">{STIPEND_KITS[key].name}</p>
-                  </button>
-                ))}
-              </div>
-              <div>
-                <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">Starting Weapon</p>
-                <div className="flex flex-wrap gap-2">
-                  {(cls.weapons || []).map(wep => (
-                    <button key={wep} onClick={() => setSelectedWeapon(wep)}
-                      className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${selectedWeapon === wep ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-950 border-slate-700 text-slate-400 hover:border-amber-500/40"}`}>
-                      {wep}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          );
-          case 8: return (
-            <div className="space-y-4">
-              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-wand-magic-sparkles mr-2"></i>Phase 8: Arcane Tuning</h3>
-              <div className="grid grid-cols-3 gap-2">
-                {["Destruction","Control","Harmony"].map(res => (
-                  <button key={res} onClick={() => { setResonanceType(res); setSelectedSpells([]); }}
-                    className={`p-3 rounded-xl border text-center text-xs font-bold transition-all ${resonanceType === res ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-900 border-slate-800 text-slate-400"}`}>
-                    {res}
-                  </button>
-                ))}
-              </div>
-              {resonanceType && (
-                <div className="grid grid-cols-1 gap-1.5">
-                  {getSpellsForClass(resonanceType).map(spell => {
-                    const isSel = selectedSpells.includes(spell.name);
-                    return (
-                      <button key={spell.name} onClick={() => isSel ? setSelectedSpells(selectedSpells.filter(s => s !== spell.name)) : selectedSpells.length < 3 && setSelectedSpells([...selectedSpells, spell.name])}
-                        className={`p-2.5 rounded-xl border text-left transition-all ${isSel ? "bg-amber-500/20 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800"}`}>
-                        <span className="font-bold text-xs">{spell.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-          case 9: {
-            const grouped = {};
-            tierOrder.forEach(t => grouped[t] = []);
-            SKILL_LIST.forEach(sk => grouped[allAssigned() ? getSkillTier(sk) : "neutral"].push(sk));
-            const max = (CLASSES[selectedClass]?.primary === "CHA" || selectedClass === "Bard") ? 4 : 3;
-            return (
-              <div className="space-y-4">
-                <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-square-check mr-2"></i>Phase 9: Skills ({selectedSkills.length}/{max})</h3>
-                {tierOrder.filter(t => grouped[t].length > 0).map(tier => (
-                  <div key={tier}>
-                    <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5 tracking-wider">{tierLabel[tier]}</p>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {grouped[tier].map(skill => {
-                        const isSel = selectedSkills.includes(skill.name);
-                        return (
-                          <button key={skill.name} onClick={() => isSel ? setSelectedSkills(selectedSkills.filter(s => s !== skill.name)) : selectedSkills.length < max && setSelectedSkills([...selectedSkills, skill.name])}
-                            className={`p-2 rounded-lg border text-xs text-left transition-all ${isSel ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-900 border-slate-800"}`}>
-                            <span className="block font-semibold">{skill.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          }
-          case 10: return (
-            <div className="space-y-4">
-              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-shield-halved mr-2"></i>Phase 10: Disposition & Ethics</h3>
-              <div className="grid grid-cols-3 gap-1.5">
-                {Object.keys(ALIGNMENTS).map(key => (
-                  <button key={key} onClick={() => setAlignment(key)}
-                    className={`p-2 rounded-lg border text-center text-xs transition-all ${alignment === key ? "bg-amber-500/20 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800"}`}>
-                    <p className="font-bold text-[10px]">{ALIGNMENTS[key].archetype}</p>
-                  </button>
-                ))}
-              </div>
-              <textarea value={flaw} onChange={e => setFlaw(e.target.value)} placeholder="Character flaw..." className="w-full bg-slate-950 border border-red-900/40 rounded-lg px-3 py-2 text-xs text-red-200 h-16 resize-none" />
-            </div>
-          );
-          case 11: return (
-            <div className="space-y-4">
-              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-file-signature mr-2"></i>Phase 11: Enrollment</h3>
-              <input type="text" value={characterName} onChange={e => setCharacterName(e.target.value)} placeholder="Character Name..." className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-amber-500 outline-none" />
-              <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value)} placeholder="Player Name..." className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs focus:border-amber-500 outline-none" />
-              <textarea value={backstory} onChange={e => setBackstory(e.target.value)} placeholder="Backstory..." className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs h-24 resize-none focus:border-amber-500 outline-none" />
-            </div>
-          );
-          default: return null;
-        }
-      };
 
       const renderSheet = () => {
         const college = COLLEGES[selectedCollege] || {};
@@ -828,7 +546,7 @@
 
       return (
         <div className="flex flex-col lg:flex-row h-screen">
-          {/* LEFT: EXAM / CHAT PANEL */}
+          {/* LEFT: PROCTOR CHAT — Sole driver of the application */}
           <section className="w-full lg:w-1/2 border-r border-slate-800 flex flex-col bg-slate-900/40 overflow-hidden">
             {/* Fixed header */}
             <div className="px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
@@ -837,59 +555,29 @@
                   <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN UNIVERSITY
                 </h1>
                 <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">
-                  {view === 'exam' ? `Entrance Assessment — Phase ${phase} of 11` : 'Biblioplex Consultation Chamber'}
+                  Admissions Proctor — Phase {phase} of 11
                 </p>
-                {view === 'exam' && (
-                  <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
-                    <div className="bg-gradient-to-r from-amber-600 to-amber-400 h-full transition-all duration-500" style={{ width: `${(phase / 11) * 100}%` }}></div>
-                  </div>
-                )}
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() => setView('exam')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${view === 'exam' ? 'bg-amber-500 text-slate-950' : 'bg-slate-950 text-slate-400 border border-slate-800 hover:border-amber-500/40'}`}>
-                    <i className="fa-solid fa-scroll mr-1"></i>Exam Phases
-                  </button>
-                  <button
-                    onClick={() => setView('chat')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${view === 'chat' ? 'bg-indigo-600 text-white' : 'bg-slate-950 text-slate-400 border border-slate-800 hover:border-indigo-500/40'}`}>
-                    <i className="fa-solid fa-comments mr-1"></i>Proctor Chat
-                  </button>
+                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full transition-all duration-500" style={{ width: `${(phase / 11) * 100}%` }}></div>
                 </div>
               </header>
             </div>
 
-            {/* Scrollable exam content */}
-            {view === 'exam' ? (
-              <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-4">
-                {renderPhase()}
+            {/* Chat area fills remaining space */}
+            <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-6 pb-4 pt-1">
+              <div className="text-[10px] text-indigo-400/60 uppercase tracking-wider pb-2 flex items-center gap-2 flex-shrink-0">
+                <i className="fa-solid fa-circle-dot fa-beat text-indigo-500/70 text-[8px]"></i>
+                Live Session — Phase {phase} active
               </div>
-            ) : (
-              /* Chat area fills remaining space */
-              <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-6 pb-4 pt-1">
-                <div className="text-[10px] text-indigo-400/60 uppercase tracking-wider pb-2 flex items-center gap-2 flex-shrink-0">
-                  <i className="fa-solid fa-circle-dot fa-beat text-indigo-500/70 text-[8px]"></i>
-                  Live Session — Phase {phase} context active
-                </div>
-                {renderChat()}
-              </div>
-            )}
+              {renderChat()}
+            </div>
 
-            {/* Nav buttons — exam mode only */}
-            {view === 'exam' && (
-              <div className="flex-shrink-0 px-4 md:px-6 py-4 border-t border-slate-800/80 flex justify-between items-center">
-                <button onClick={handlePrev} disabled={phase === 1} className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 rounded-lg text-xs font-semibold hover:border-amber-500/40 transition-all">
-                  ← Previous
+            {/* Submit button on Phase 11 */}
+            {phase >= 11 && (
+              <div className="flex-shrink-0 px-4 md:px-6 py-4 border-t border-slate-800/80 flex justify-end">
+                <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
+                  <i className="fa-solid fa-cloud-arrow-up mr-2"></i>{isSaving ? "Syncing…" : "Submit Enrollment"}
                 </button>
-                {phase < 11 ? (
-                  <button onClick={handleNext} className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold shadow transition-all">
-                    Next Phase →
-                  </button>
-                ) : (
-                  <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
-                    <i className="fa-solid fa-cloud-arrow-up mr-2"></i>{isSaving ? "Syncing…" : "Submit File"}
-                  </button>
-                )}
               </div>
             )}
           </section>
