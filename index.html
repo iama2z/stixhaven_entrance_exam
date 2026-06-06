@@ -358,8 +358,7 @@
         if (pendingValue !== null) {
           const old = statAssignments[stat];
           setStatAssignments({ ...statAssignments, [stat]: pendingValue });
-          setPendingValue(old); // return old value to pending (then user clicks away to drop it)
-          if (old === null) setPendingValue(null);
+          setPendingValue(old);
         } else if (statAssignments[stat] !== null) {
           setStatAssignments({ ...statAssignments, [stat]: null });
         }
@@ -844,7 +843,7 @@
             return (
               <div className="space-y-4">
                 <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
-                  "Select {max} additional skills from the Academic Aptitude register. Skills are ranked by your current attribute modifiers. Choose wisely — the ⚠️ flagged skills carry a statistical penalty."
+                  {`Select ${max} additional skills from the Academic Aptitude register. Skills are ranked by your current attribute modifiers. Choose wisely — the ⚠️ flagged skills carry a statistical penalty.`}
                 </div>
                 <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-square-check mr-2"></i>Phase 9: Academic Aptitude ({selectedSkills.length}/{max})</h3>
                 {tierOrder.filter(t => grouped[t].length > 0).map(tier => (
