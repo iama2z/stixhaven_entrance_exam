@@ -1,7 +1,8 @@
 /* eslint-disable max-len */
-const {onCall} = require("firebase-functions/v2/https");
+const {onRequest} = require("firebase-functions/v2/https");
 const {initializeApp} = require("firebase-admin/app");
 const {GoogleGenerativeAI} = require("@google/generative-ai");
+const cors = require("cors")({origin: true});
 
 initializeApp();
 
@@ -30,24 +31,31 @@ Phase 10: Disposition - "How do you handle pressure?" A) Challenge rules B) Supp
 Phase 11: Name - "What does your name say about your journey?" Provide a final summary and ask them to sign.
 `;
 
-exports.strixhavenConsultant = onCall(
+exports.strixhavenConsultant = onRequest(
     {secrets: ["GEMINI_API_KEY"]},
-    async (request) => {
-      const {playerPrompt, jsonCategory} = request.data;
+    (req, res) => {
+      cors(req, res, async () => {
+        try {
+          const {playerPrompt, jsonCategory} = req.body.data;
+          const data = require(`./data/${jsonCategory}.json`);
 
-      const data = require(`./data/${jsonCategory}.json`);
+          const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+          const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            systemInstruction: PROCTOR_INSTRUCTIONS,
+          });
 
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+          const prompt = "Use this database as your source of truth for the current phase: " +
+            JSON.stringify(data) + "\n\nStudent says: " + playerPrompt;
 
-      const model = genAI.getGenerativeModel({
-        model: "gemini-1.5-flash",
-        systemInstruction: PROCTOR_INSTRUCTIONS,
+          const result = await model.generateContent(prompt);
+
+          // Send response in the format Firebase client SDK expects
+          res.status(200).send({data: {response: result.response.text()}});
+        } catch (error) {
+          console.error(error);
+          res.status(500).send({error: "The Biblioplex archives are currently unreachable."});
+        }
       });
-
-      const prompt = "Use this database as your source of truth for the current phase: " +
-        JSON.stringify(data) + "\n\nStudent says: " + playerPrompt;
-
-      const result = await model.generateContent(prompt);
-      return {response: result.response.text()};
     },
 );
