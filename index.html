@@ -66,500 +66,1174 @@
     initializePlayerSession();
   </script>
 
-  <script type="text/babel">
+<script type="text/babel">
     const { useState, useEffect } = React;
 
-    // --- LOCAL FALLBACK DATABASES ---
+    // ─── GAME DATA ───────────────────────────────────────────────────────────────
+
+    const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
+    const STAT_LABELS = { STR: "Strength", DEX: "Dexterity", CON: "Constitution", INT: "Intelligence", WIS: "Wisdom", CHA: "Charisma" };
+
     const COLLEGES = {
-      Prismari: { name: "Prismari", description: "The College of Elemental Arts...", primer: "Prismari Primer", feat: "Prismari Initiate", skills: ["Acrobatics", "Performance"], spellcastingAbility: "CHA", spells: ["Fire Bolt", "Ray of Frost", "Thunderwave"], motto: "Express yourself with raw elemental power." },
-      Silverquill: { name: "Silverquill", description: "The College of Eloquence...", primer: "Silverquill Statement", feat: "Silverquill Initiate", skills: ["Deception", "Intimidation"], spellcastingAbility: "CHA", spells: ["Sacred Flame", "Vicious Mockery", "Guiding Bolt"], motto: "Words are weapons; wield them with style." },
-      Quandrix: { name: "Quandrix", description: "The College of Numerology...", primer: "Quandrix Query", feat: "Quandrix Initiate", skills: ["Arcana", "Investigation"], spellcastingAbility: "INT", spells: ["Guidance", "Mage Hand", "Shield"], motto: "Reality is a formula waiting to be rewritten." },
-      Witherbloom: { name: "Witherbloom", description: "The College of Essence Studies...", primer: "Witherbloom Wasting", feat: "Witherbloom Initiate", skills: ["Medicine", "Nature"], spellcastingAbility: "WIS", spells: ["Spare the Dying", "Acid Splash", "Cure Wounds"], motto: "Grow, decay, and channel the organic weave." },
-      Lorehold: { name: "Lorehold", description: "The College of Archaeomancy...", primer: "Lorehold Ledger", feat: "Lorehold Initiate", skills: ["History", "Religion"], spellcastingAbility: "INT", spells: ["Light", "Sacred Flame", "Comprehend Languages"], motto: "Dig deep into the past to light the future." }
+      Prismari:    { name: "Prismari",    primer: "Prismari Primer",     feat: "Prismari Initiate",    skills: ["Acrobatics", "Performance"],    spellcastingAbility: "CHA", spells: ["Fire Bolt", "Ray of Frost", "Shield"],              motto: "Express yourself with raw elemental power.",       color: "from-orange-600 to-red-600",    icon: "fa-fire" },
+      Silverquill: { name: "Silverquill", primer: "Silverquill Statement",feat: "Silverquill Initiate", skills: ["Intimidation", "Persuasion"],   spellcastingAbility: "CHA", spells: ["Sacred Flame", "Vicious Mockery", "Guiding Bolt"], motto: "Words are weapons; wield them with style.",        color: "from-slate-600 to-zinc-700",    icon: "fa-feather-pointed" },
+      Quandrix:    { name: "Quandrix",    primer: "Quandrix Query",       feat: "Quandrix Initiate",    skills: ["Arcana", "Investigation"],      spellcastingAbility: "INT", spells: ["Guidance", "Mage Hand", "Entangle"],              motto: "Reality is a formula waiting to be rewritten.",   color: "from-teal-600 to-green-700",    icon: "fa-infinity" },
+      Witherbloom: { name: "Witherbloom", primer: "Witherbloom Wasting",  feat: "Witherbloom Initiate", skills: ["Animal Handling", "Nature"],    spellcastingAbility: "WIS", spells: ["Chill Touch", "Spare the Dying", "Cure Wounds"],  motto: "Grow, decay, and channel the organic weave.",     color: "from-green-800 to-emerald-900", icon: "fa-seedling" },
+      Lorehold:    { name: "Lorehold",    primer: "Lorehold Ledger",      feat: "Lorehold Initiate",    skills: ["History", "Religion"],          spellcastingAbility: "INT", spells: ["Light", "Sacred Flame", "Comprehend Languages"],  motto: "Dig deep into the past to light the future.",     color: "from-amber-700 to-yellow-800",  icon: "fa-scroll" }
     };
 
     const LINEAGES = {
-      Owlin: { name: "Owlin", description: "Distant kin of giant owls...", size: "Medium", speed: 30, traits: ["Darkvision (120ft)", "Flight", "Silent Feathers"] },
-      Human: { name: "Human", description: "Versatile, curious, and resilient...", size: "Medium", speed: 30, traits: ["Resourceful", "Versatile"] },
-      Elf: { name: "Elf", description: "Graceful and magical folk...", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Fey Ancestry", "Keen Senses"] },
-      Dwarf: { name: "Dwarf", description: "Stout and resilient defenders...", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Dwarven Resilience", "Dwarven Toughness"] },
-      Tiefling: { name: "Tiefling", description: "Bearers of a supernatural heritage...", size: "Medium", speed: 30, traits: ["Darkvision (60ft)", "Fire Resistance", "Thaumaturgy Cantrip"] }
+      Owlin:    { name: "Owlin",    sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 120, traits: ["Flight: Flying speed equal to walking speed.", "Silent Feathers: Proficiency in Stealth."], proctorHint: "Excellent for scouting. Flight gives you the high ground over campus rooftops — stay out of melee range." },
+      Human:    { name: "Human",    sizeOptions: ["Medium"],          speed: 30, darkvision: 0,   traits: ["Resourceful: Gain Heroic Inspiration after a Long Rest.", "Versatile: Gain one Origin Feat at character creation."], proctorHint: "The ultimate wildcard. An Origin Feat at Level 1 lets you specialize immediately — a powerful academic head start." },
+      Elf:      { name: "Elf",      sizeOptions: ["Medium"],          speed: 30, darkvision: 60,  traits: ["Fey Ancestry: Advantage on saves vs. Charmed; magic cannot put you to sleep.", "Trance: 4 hours of meditation counts as a Long Rest.", "Keen Senses: Proficiency in Perception."], proctorHint: "The supreme Controller. High Elf lineage lets you swap a cantrip daily — an unmatched tactical advantage." },
+      Dwarf:    { name: "Dwarf",    sizeOptions: ["Medium"],          speed: 25, darkvision: 60,  traits: ["Dwarven Resilience: Advantage on Poison saves; Poison resistance.", "Stonecunning: Double Proficiency Bonus on History checks about stonework."], proctorHint: "Premier frontliner. Hill Dwarf lineage grants +1 max HP per level — a compound advantage that scales across all four years." },
+      Tiefling: { name: "Tiefling", sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Hellish Resistance: Resistance to Fire damage.", "Otherworldly Gaze: Thaumaturgy cantrip + Hellish Rebuke + Darkness spells."], proctorHint: "Natural Blaster. Casting Darkness creates consistent battlefield control that even blocks magical vision." },
+      Gnome:    { name: "Gnome",    sizeOptions: ["Small"],           speed: 30, darkvision: 60,  traits: ["Gnome Cunning: Advantage on all INT, WIS, and CHA saving throws against magic."], proctorHint: "Tailored for arcane study. Gnome Cunning provides unmatched resilience against rival spellcasters in exam duels." },
+      Halfling: { name: "Halfling", sizeOptions: ["Small"],           speed: 30, darkvision: 0,   traits: ["Lucky: Reroll a natural 1 on any d20 roll.", "Brave: Advantage on saves vs. being Frightened.", "Halfling Nimbleness: Move through the space of larger creatures."], proctorHint: "Perfect Support companion. The Lucky trait dramatically reduces the statistical risk of critical failure at the worst moments." },
+      Aasimar:  { name: "Aasimar",  sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Celestial Resistance: Resistance to Necrotic and Radiant damage.", "Healing Hands: Restore HP equal to d4s × Proficiency Bonus as an action.", "Celestial Revelation at 3rd level: choose Heavenly Wings, Inner Radiance, or Necrotic Shroud."], proctorHint: "Ideal Support/Blaster hybrid. Heavenly Wings at 3rd level grants flight — exceptional for repositioning mid-battle." },
+      Orc:      { name: "Orc",      sizeOptions: ["Medium"],          speed: 30, darkvision: 120, traits: ["Adrenaline Rush: Bonus action Dash + Temporary HP equal to Proficiency Bonus.", "Powerful Build: Count as one size larger for carrying capacity.", "Relentless Endurance: Drop to 1 HP instead of 0 HP, once per Long Rest."], proctorHint: "Outstanding Support tank. Adrenaline Rush lets you sprint to a downed ally in seconds — a life-saving campus tactic." }
     };
 
     const CLASSES = {
-      Wizard: { name: "Wizard", hitDie: 6, primary: "INT", saves: ["INT", "WIS"], weapons: ["Dagger", "Quarterstaff"] },
-      Sorcerer: { name: "Sorcerer", hitDie: 6, primary: "CHA", saves: ["CON", "CHA"], weapons: ["Dagger", "Light Crossbow"] },
-      Bard: { name: "Bard", hitDie: 8, primary: "CHA", saves: ["DEX", "CHA"], weapons: ["Rapier", "Shortbow"] },
-      Druid: { name: "Druid", hitDie: 8, primary: "WIS", saves: ["INT", "WIS"], weapons: ["Sickle", "Quarterstaff"] },
-      Cleric: { name: "Cleric", hitDie: 8, primary: "WIS", saves: ["WIS", "CHA"], weapons: ["Mace", "Light Crossbow"] },
-      Fighter: { name: "Fighter", hitDie: 10, primary: "STR", saves: ["STR", "CON"], weapons: ["Greatsword", "Longbow"] },
-      Rogue: { name: "Rogue", hitDie: 8, primary: "DEX", saves: ["DEX", "INT"], weapons: ["Rapier", "Shortbow"] }
+      Bard:      { name: "Bard",      hitDie: 8,  primary: "CHA", saves: ["DEX", "CHA"], weapons: ["Rapier", "Longsword", "Dagger", "Light Crossbow"],    description: "Arcane performer who weaves magic through music, words, and performance." },
+      Cleric:    { name: "Cleric",    hitDie: 8,  primary: "WIS", saves: ["WIS", "CHA"], weapons: ["Mace", "Warhammer", "Light Crossbow"],                  description: "Divine spellcaster channeling the power of a deity through faith and ritual." },
+      Druid:     { name: "Druid",     hitDie: 8,  primary: "WIS", saves: ["INT", "WIS"], weapons: ["Scimitar", "Quarterstaff", "Sickle"],                    description: "Nature spellcaster who shapeshifts and wields primal elemental forces." },
+      Fighter:   { name: "Fighter",   hitDie: 10, primary: "STR", saves: ["STR", "CON"], weapons: ["Greatsword", "Longsword", "Longbow", "Handaxe"],          description: "Martial expert trained in the full spectrum of combat tactics and weaponry." },
+      Monk:      { name: "Monk",      hitDie: 8,  primary: "DEX", saves: ["STR", "DEX"], weapons: ["Shortsword", "Dart"],                                    description: "Unarmed martial artist who channels inner ki into devastating strikes." },
+      Paladin:   { name: "Paladin",   hitDie: 10, primary: "STR", saves: ["WIS", "CHA"], weapons: ["Longsword", "Warhammer", "Javelin"],                      description: "Holy warrior who combines martial prowess with powerful divine magic." },
+      Ranger:    { name: "Ranger",    hitDie: 10, primary: "DEX", saves: ["STR", "DEX"], weapons: ["Shortsword", "Longbow", "Handaxe"],                       description: "Wilderness tracker and hunter with a suite of natural and magical abilities." },
+      Rogue:     { name: "Rogue",     hitDie: 8,  primary: "DEX", saves: ["DEX", "INT"], weapons: ["Rapier", "Shortbow", "Dagger"],                           description: "Cunning operative who strikes with precision and disappears into shadow." },
+      Sorcerer:  { name: "Sorcerer",  hitDie: 6,  primary: "CHA", saves: ["CON", "CHA"], weapons: ["Dagger", "Light Crossbow"],                              description: "Innate spellcaster whose magic flows from blood, a wild font of raw power." },
+      Warlock:   { name: "Warlock",   hitDie: 8,  primary: "CHA", saves: ["WIS", "CHA"], weapons: ["Dagger", "Light Crossbow"],                              description: "Pact-bound caster who draws power from an otherworldly patron entity." },
+      Wizard:    { name: "Wizard",    hitDie: 6,  primary: "INT", saves: ["INT", "WIS"], weapons: ["Quarterstaff", "Dagger"],                                 description: "Scholarly spellcaster who learns and copies spells into a personal spellbook." },
+      Barbarian: { name: "Barbarian", hitDie: 12, primary: "STR", saves: ["STR", "CON"], weapons: ["Greataxe", "Handaxe", "Javelin"],                         description: "Fierce primal warrior who enters a furious rage to become an unstoppable force." }
     };
 
     const CLUBS = {
-      "Fine Artists": { name: "Distinguished Society of Fine Artists", skills: ["Performance", "Sleight of Hand"], npc: "Rosie Wirthmore (Year 1)", description: "For creators who paint, sculpt, or manifest grand beauty." },
-      "LARP Guild": { name: "LARP Guild", skills: ["Acrobatics", "Deception"], npc: "Grayson Wildemere (Year 1)", description: "Re-enacting historic battles with padded foam." },
-      "Strixhaven Star": { name: "Strixhaven Star Newspaper", skills: ["Investigation", "Insight"], npc: "Jenevelle Rill (Year 1)", description: "Chasing rumors and detailing the campus's deepest secrets." }
+      "Fine Artists":       { name: "Distinguished Society of Fine Artists",    skills: ["Performance", "Sleight of Hand"], npc: "Rosie Wirthmore (Year 1)",      description: "For painters, sculptors, and those who manifest raw beauty through magical mediums." },
+      "LARP Guild":         { name: "LARP Guild",                                skills: ["Acrobatics", "Deception"],        npc: "Grayson Wildemere (Year 1)",    description: "Re-enacting historic battles with enchanted padded arms and costume spellwork." },
+      "Strixhaven Star":    { name: "Strixhaven Star Newspaper",                 skills: ["Investigation", "Insight"],       npc: "Jenevelle Rill (Year 1)",        description: "Chasing campus rumors and uncovering the university's deepest academic secrets." },
+      "Drama Society":      { name: "Campus Drama Society",                      skills: ["Performance", "Persuasion"],      npc: "Cadoras Damellawar (Year 1)",   description: "Performing theatrical productions on Silverquill's storied amphitheater stage." },
+      "Silkball Club":      { name: "Intramural Silkball Club",                  skills: ["Athletics", "Acrobatics"],        npc: "Zanther Bowen (Year 1)",         description: "Competing in Strixhaven's premier aerial sport across the magically suspended courts." }
+    };
+
+    const ALIGNMENTS = {
+      "Lawful Good":    { archetype: "The Model Prefect",          grid: [0,0], description: "Combines duty with promotion of institutional welfare. Leads by example, mediates disputes, and upholds the academic code even when it costs them personally." },
+      "Neutral Good":   { archetype: "The Dedicated Ensemble Player", grid: [1,0], description: "Community-focused; uplifts teammates and fosters harmony within the system. The backbone of every study group and the first to offer notes to a struggling peer." },
+      "Chaotic Good":   { archetype: "The Passionate Rebel",       grid: [2,0], description: "Values creative freedom over bureaucracy; breaks rules to protect or inspire peers. Challenges unfair policies and champions experimental forms of expression." },
+      "Lawful Neutral": { archetype: "The Rigid Formalist",        grid: [0,1], description: "Operates strictly by the student handbook and a rigid personal code, independent of moral pressure. Efficient, reliable, and entirely unpredictable to emotional appeals." },
+      "True Neutral":   { archetype: "The Focused Academic Artist", grid: [1,1], description: "Detached from campus politics; prefers to observe the multiverse from a careful distance. Excellence in study is the only metric that matters." },
+      "Chaotic Neutral":{ archetype: "The Free-Spirited Maverick", grid: [2,1], description: "Pushes the boundaries of university policy for the sake of personal expression. The first to attempt an untested spell combination and document the results — whatever they may be." },
+      "Lawful Evil":    { archetype: "The Ruthless Curve-Setter",  grid: [0,2], description: "Methodically exploits the university hierarchy and rulebook to ensure their own advancement at any cost, leaving no exploit unused." },
+      "Neutral Evil":   { archetype: "The Unscrupulous Careerist", grid: [1,2], description: "Does whatever they can get away with to succeed, lacking compassion for struggling classmates or campus welfare." },
+      "Chaotic Evil":   { archetype: "The Anarchic Disruptor",     grid: [2,2], description: "Spurred by personal greeds or animosities; acts with arbitrary disregard for campus safety or academic progress." }
     };
 
     const STIPEND_KITS = {
-      "Star Performer": { name: "Star Performer Kit", contents: "An instrument of choice, premium ink/paints, performance notebook, silk sash." },
-      "Stealthy Archivist": { name: "Stealthy Archivist Kit", contents: "Hooded lantern, steel hand-mirror, multi-key set, durable leather backpack." }
+      "Star Performer":      { name: "Star Performer Kit",       contents: "Custom instrument of choice, premium enchanted ink & paints, leather performance notebook, silk ceremonial sash." },
+      "Stealthy Archivist":  { name: "Stealthy Archivist Kit",   contents: "Hooded lantern, steel hand-mirror, five-key ring, durable reinforced leather backpack." },
+      "Practical Survivalist":{ name: "Practical Survivalist Kit", contents: "Camping tent, 50ft hemp rope, 5 days of field rations, emergency medical bandages." }
     };
 
     const SKILL_LIST = [
-      { name: "Acrobatics", stat: "DEX" }, { name: "Arcana", stat: "INT" }, { name: "Athletics", stat: "STR" },
-      { name: "Deception", stat: "CHA" }, { name: "History", stat: "INT" }, { name: "Insight", stat: "WIS" },
-      { name: "Intimidation", stat: "CHA" }, { name: "Investigation", stat: "INT" }, { name: "Medicine", stat: "WIS" },
-      { name: "Nature", stat: "INT" }, { name: "Perception", stat: "WIS" }, { name: "Performance", stat: "CHA" },
-      { name: "Persuasion", stat: "CHA" }, { name: "Religion", stat: "INT" }, { name: "Stealth", stat: "DEX" }
+      { name: "Acrobatics",     stat: "DEX" }, { name: "Animal Handling", stat: "WIS" }, { name: "Arcana",       stat: "INT" },
+      { name: "Athletics",      stat: "STR" }, { name: "Deception",       stat: "CHA" }, { name: "History",      stat: "INT" },
+      { name: "Insight",        stat: "WIS" }, { name: "Intimidation",    stat: "CHA" }, { name: "Investigation",stat: "INT" },
+      { name: "Medicine",       stat: "WIS" }, { name: "Nature",          stat: "INT" }, { name: "Perception",   stat: "WIS" },
+      { name: "Performance",    stat: "CHA" }, { name: "Persuasion",      stat: "CHA" }, { name: "Religion",     stat: "INT" },
+      { name: "Sleight of Hand",stat: "DEX" }, { name: "Stealth",         stat: "DEX" }, { name: "Survival",     stat: "WIS" }
     ];
 
-    function App() {
-      // --- CLOUD LIBRARY STATES ---
-      const [cloudClasses, setCloudClasses] = useState(CLASSES);
-      const [cloudColleges, setCloudColleges] = useState(COLLEGES);
-      const [cloudLineages, setCloudLineages] = useState(LINEAGES);
-      const [dbLoaded, setDbLoaded] = useState(false);
+    const TOOLS_BY_CLASS = {
+      Bard:      { label: "Musical Instrument (Spellcasting Focus)", options: ["Lute", "Flute", "Viol", "Drum", "Horn", "Lyre", "Pan Flute", "Synth Keyboard"] },
+      Wizard:    { label: "Arcane Focus",    options: ["Crystal", "Orb", "Rod", "Wand", "Arcane Staff"] },
+      Sorcerer:  { label: "Arcane Focus",    options: ["Crystal", "Orb", "Rod", "Wand", "Arcane Staff"] },
+      Warlock:   { label: "Arcane Focus",    options: ["Crystal", "Orb", "Rod", "Wand", "Arcane Staff"] },
+      Druid:     { label: "Druidic Focus",   options: ["Sprig of Mistletoe", "Totem", "Wooden Staff", "Yew Wand"] },
+      Cleric:    { label: "Holy Symbol",     options: ["Amulet", "Emblem", "Shield Emblem", "Reliquary"] },
+      Paladin:   { label: "Holy Symbol",     options: ["Amulet", "Emblem", "Shield Emblem", "Reliquary"] },
+      Fighter:   { label: "Artisan's Tools", options: ["Smith's Tools", "Carpenter's Tools", "Mason's Tools", "Tinker's Tools"] },
+      Rogue:     { label: "Specialist Kit",  options: ["Thieves' Tools", "Disguise Kit", "Forgery Kit", "Poisoner's Kit"] },
+      Ranger:    { label: "Explorer's Kit",  options: ["Herbalism Kit", "Cartographer's Tools", "Navigator's Tools"] },
+      Monk:      { label: "Artisan's Tools", options: ["Calligrapher's Supplies", "Potter's Tools", "Weaver's Tools"] },
+      Barbarian: { label: "Artisan's Tools", options: ["Smith's Tools", "Brewer's Supplies", "Leatherworker's Tools"] }
+    };
 
+    const SPELLS_BY_RESONANCE = {
+      Destruction: [
+        { name: "Fire Bolt",       level: "Cantrip",   classes: ["Sorcerer","Wizard","Prismari"],         desc: "A flame mote that deals fire damage and ignites flammable objects." },
+        { name: "Ray of Frost",    level: "Cantrip",   classes: ["Sorcerer","Wizard"],                    desc: "Frigid beam dealing cold damage and reducing movement by 10 ft." },
+        { name: "Vicious Mockery", level: "Cantrip",   classes: ["Bard","Silverquill"],                   desc: "Psychic damage + Disadvantage on target's next attack roll." },
+        { name: "Eldritch Blast",  level: "Cantrip",   classes: ["Warlock"],                              desc: "Beam of crackling force energy. A Warlock's bread and butter." },
+        { name: "Sacred Flame",    level: "Cantrip",   classes: ["Cleric","Lorehold","Silverquill"],      desc: "Radiant damage that bypasses the benefits of cover entirely." },
+        { name: "Magic Missile",   level: "1st-level", classes: ["Sorcerer","Wizard"],                    desc: "Three auto-hitting force darts. Never misses; reliable on low-hit-chance fights." },
+        { name: "Burning Hands",   level: "1st-level", classes: ["Sorcerer","Wizard"],                    desc: "15-foot cone of fire. High damage, but requires close range." },
+        { name: "Chromatic Orb",   level: "1st-level", classes: ["Sorcerer","Wizard"],                    desc: "Sphere of chosen energy type: acid, cold, fire, lightning, poison, or thunder." },
+        { name: "Guiding Bolt",    level: "1st-level", classes: ["Cleric"],                               desc: "Radiant damage + Advantage on the next attack against the target." },
+        { name: "Hellish Rebuke",  level: "1st-level", classes: ["Warlock"],                              desc: "Reaction: wreath attacker in hellfire after they damage you." }
+      ],
+      Control: [
+        { name: "Minor Illusion",  level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"],   desc: "Creates a sound or image to distract and misdirect enemies." },
+        { name: "Blade Ward",      level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"],   desc: "Resistance to bludgeoning, piercing, and slashing for one round." },
+        { name: "Thunderwave",     level: "1st-level", classes: ["Bard","Druid","Sorcerer","Wizard","Prismari"], desc: "15-foot cube: thunder damage + push enemies 10 ft back. Ideal for rafters." },
+        { name: "Bane",            level: "1st-level", classes: ["Bard","Cleric","Warlock"],               desc: "Curses 3 targets: subtract 1d4 from attack rolls and saving throws." },
+        { name: "Hideous Laughter",level: "1st-level", classes: ["Bard","Wizard"],                        desc: "Target falls prone and is incapacitated with uncontrollable laughter." },
+        { name: "Faerie Fire",     level: "1st-level", classes: ["Bard","Druid"],                         desc: "Outlines all creatures in area with light; grants Advantage on attacks against them." },
+        { name: "Entangle",        level: "1st-level", classes: ["Druid","Quandrix"],                     desc: "Grasping weeds restrain creatures in a 20-foot square of difficult terrain." },
+        { name: "Fog Cloud",       level: "1st-level", classes: ["Druid","Sorcerer","Wizard"],            desc: "Dense 20-foot sphere obscures all vision. Classic zone-denial." },
+        { name: "Charm Person",    level: "1st-level", classes: ["Bard","Druid","Sorcerer","Warlock","Wizard"], desc: "A humanoid sees you as a trusted, friendly acquaintance." },
+        { name: "Color Spray",     level: "1st-level", classes: ["Bard","Sorcerer","Wizard"],             desc: "Flash of vivid color blinds creatures in a cone area." }
+      ],
+      Harmony: [
+        { name: "Guidance",        level: "Cantrip",   classes: ["Cleric","Druid","Quandrix","Witherbloom"], desc: "Grants a d4 bonus to one ability check. Invaluable for academic exams." },
+        { name: "Resistance",      level: "Cantrip",   classes: ["Cleric","Druid"],                       desc: "Grants a d4 bonus to a saving throw of the target's choice." },
+        { name: "Spare the Dying", level: "Cantrip",   classes: ["Cleric","Witherbloom"],                 desc: "Instantly stabilizes a creature at 0 HP. No more death saves needed." },
+        { name: "Mending",         level: "Cantrip",   classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"], desc: "Repairs a break or tear in an object. Useful for instrument maintenance." },
+        { name: "Cure Wounds",     level: "1st-level", classes: ["Bard","Cleric","Druid","Paladin","Ranger","Prismari","Witherbloom"], desc: "Heals a touched creature using your spellcasting modifier." },
+        { name: "Healing Word",    level: "1st-level", classes: ["Bard","Cleric","Druid"],                desc: "Bonus-action vocal healing. Restores HP from a distance." },
+        { name: "Bless",           level: "1st-level", classes: ["Cleric","Paladin"],                     desc: "Grants 3 allies a d4 bonus to all attack rolls and saving throws." },
+        { name: "Heroism",         level: "1st-level", classes: ["Bard","Paladin"],                       desc: "Immune to Frightened + temporary HP each turn for the duration." },
+        { name: "Shield",          level: "1st-level", classes: ["Sorcerer","Wizard","Prismari"],         desc: "+5 AC as a reaction. Also blocks Magic Missile automatically." },
+        { name: "Detect Magic",    level: "1st-level", classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"], desc: "Sense magical auras within 30 feet. Glowing outlines reveal hidden enchantments." }
+      ]
+    };
+
+    const PERSONALITY_TRAITS = [
+      "I always have a witty remark ready, even in the most inappropriate situations.",
+      "I lose myself completely in whatever creative project I am currently working on.",
+      "I express my deepest emotions through performance rather than direct words.",
+      "I am extremely curious about other people's lives and never miss a chance to learn.",
+      "I treat every social interaction as a potential collaboration or a future audience.",
+      "I see patterns and connections everywhere — in music, in numbers, in the flight of birds."
+    ];
+
+    const IDEALS = [
+      "Creativity: Art is meant to push boundaries and challenge the established order. (Chaotic)",
+      "Community: Every ensemble member matters. We rise together or not at all. (Good)",
+      "Knowledge: Every experience is research material; even failure teaches. (Any)",
+      "Expression: Authentic self-expression is the highest form of magic. (Chaotic)",
+      "Excellence: Mediocrity is a form of disrespect to one's craft and one's college. (Lawful)",
+      "Freedom: Rules are suggestions; true inspiration knows no restriction. (Chaotic)"
+    ];
+
+    const BONDS = [
+      "My performance troupe is my found family; I would sacrifice anything to protect them.",
+      "A particular faculty mentor saw potential in me when no one else did.",
+      "I came to Strixhaven to prove something essential to my family back home.",
+      "My instrument or focus belonged to someone important I have lost.",
+      "I am searching for a technique or piece of forbidden knowledge hidden in the archives.",
+      "My college rivalry with another student quietly pushes me to exceed my own limits."
+    ];
+
+    const FLAWS_BY_STAT = {
+      STR: "I overcompensate for my physical weakness with loud bravado, often volunteering for feats I cannot complete.",
+      DEX: "My clumsiness regularly causes accidents and deeply embarrassing scenes at the absolute worst moments.",
+      CON: "I tire far more easily than my peers, which I desperately try to conceal with feigned disinterest.",
+      INT: "I struggle with complex theorems and frequently nod along in lecture while secretly, completely lost.",
+      WIS: "I am so absorbed in my own creative vision that I routinely miss obvious social cues and immediate dangers.",
+      CHA: "My social awkwardness causes me to come across as cold or aloof when I am simply and desperately nervous."
+    };
+
+    const NAME_BUCKETS = {
+      lineage: {
+        label: "🧬 Lineage / Heritage Names",
+        Owlin: ["Sylvara", "Morrith", "Talvyn", "Hoowyn", "Feathrix", "Vespa"],
+        Human: ["Calder", "Mira", "Theron", "Sable", "Evyn", "Rowan"],
+        Elf: ["Aelindra", "Caladrel", "Silverwyn", "Thaliondir", "Erindel", "Lirien"],
+        Dwarf: ["Brunna", "Torvald", "Greta", "Hamric", "Dagni", "Bofrik"],
+        Tiefling: ["Vesper", "Azariel", "Scorch", "Malva", "Cindrix", "Zara"],
+        Gnome: ["Wobble", "Fizwick", "Ninka", "Sprocket", "Luminara", "Glib"],
+        Halfling: ["Pippa", "Merry", "Clover", "Roswyn", "Tansy", "Bilbo"],
+        Aasimar: ["Aurelius", "Celestine", "Soleil", "Radiance", "Lucen", "Serapha"],
+        Orc: ["Gorthak", "Morda", "Brenna", "Ursa", "Krag", "Valda"],
+        default: ["Caelum", "Liriel", "Varis", "Sera", "Thorn", "Evren"]
+      },
+      college: {
+        label: "🎓 College / Aesthetic Names",
+        Prismari: ["Blazara", "Frostwick", "Stormsong", "Emberholt", "Galewing", "Cinder"],
+        Silverquill: ["Inkborne", "Quillstrike", "Shadevoice", "Pencraft", "Blottrix", "Crimsontongue"],
+        Quandrix: ["Axiom", "Tessera", "Logarith", "Spiral", "Fractaline", "Archimedes"],
+        Witherbloom: ["Thornvine", "Mosswhisper", "Dewthorn", "Rotleaf", "Ivysong", "Mulch"],
+        Lorehold: ["Stonearch", "Dustwhisper", "Archaeon", "Relic", "Vaultkeeper", "Carven"],
+        default: ["Stardust", "Prismway", "Wandermere", "Brightquill", "Lorewright", "Aethon"]
+      },
+      ironic: {
+        label: "😅 Ironic / Flaw-Contrast Names",
+        DEX: ["Grace", "Nimble", "Swift", "Fleetfoot", "Sure-Step", "Airy"],
+        STR: ["Atlas", "Boulder", "Ironside", "Grit", "Hefty", "Titan"],
+        CON: ["Endure", "Stalwart", "Tireless", "Oakhart", "Steadfast", "Ironlung"],
+        INT: ["Scholar", "Sage", "Bright", "Luminary", "Summa", "Prodigy"],
+        WIS: ["Oracle", "Foresight", "Serenity", "Clairvoyant", "Aware", "Mindful"],
+        CHA: ["Allure", "Heartwarming", "Magnetic", "Radiant", "Charming", "Vivid"],
+        default: ["Serendipity", "Fortuna", "Brilliance", "Ironwill", "Destiny", "Triumph"]
+      }
+    };
+
+    // ─── APP COMPONENT ────────────────────────────────────────────────────────────
+
+    function App() {
       const [phase, setPhase] = useState(1);
       const [activeSheetTab, setActiveSheetTab] = useState(1);
       const [isSaving, setIsSaving] = useState(false);
 
-      // Character State
+      // Phase 1: Lineage & Size
+      const [selectedLineage, setSelectedLineage] = useState("Human");
+      const [selectedSize, setSelectedSize] = useState("Medium");
+
+      // Phase 2: Class
+      const [selectedClass, setSelectedClass] = useState("Bard");
+
+      // Phase 3: College
+      const [selectedCollege, setSelectedCollege] = useState("Prismari");
+
+      // Phase 4: Club
+      const [selectedClub, setSelectedClub] = useState("Fine Artists");
+
+      // Phase 5: Stats — Standard Array
+      const [statAssignments, setStatAssignments] = useState({ STR: null, DEX: null, CON: null, INT: null, WIS: null, CHA: null });
+      const [pendingValue, setPendingValue] = useState(null);
+
+      // Phase 6: Tool / Instrument
+      const [selectedTool, setSelectedTool] = useState("");
+
+      // Phase 7: Equipment
+      const [selectedStipend, setSelectedStipend] = useState("Star Performer");
+      const [selectedWeapon, setSelectedWeapon] = useState("");
+
+      // Phase 8: Arcane Tuning
+      const [resonanceType, setResonanceType] = useState(null);
+      const [selectedSpells, setSelectedSpells] = useState([]);
+
+      // Phase 9: Skills
+      const [selectedSkills, setSelectedSkills] = useState([]);
+
+      // Phase 10: Disposition
+      const [alignment, setAlignment] = useState("Neutral Good");
+      const [selectedTrait, setSelectedTrait] = useState(PERSONALITY_TRAITS[0]);
+      const [selectedIdeal, setSelectedIdeal] = useState(IDEALS[0]);
+      const [selectedBond, setSelectedBond] = useState(BONDS[0]);
+      const [flaw, setFlaw] = useState("");
+
+      // Phase 11: Enrollment
       const [characterName, setCharacterName] = useState("");
       const [playerName, setPlayerName] = useState("");
-      const [selectedLineage, setSelectedLineage] = useState("Human");
-      const [selectedCollege, setSelectedCollege] = useState("Prismari");
-      const [selectedClass, setSelectedClass] = useState("Wizard");
-      const [selectedClub, setSelectedClub] = useState("Fine Artists");
-      const [selectedStipend, setSelectedStipend] = useState("Star Performer");
-      const [alignment, setAlignment] = useState("Neutral Good");
-      const [alignmentStyle, setAlignmentStyle] = useState("Dedicated Ensemble Player");
-      
-      const [baseScores, setBaseScores] = useState({ STR: 10, DEX: 13, CON: 12, INT: 15, WIS: 14, CHA: 8 });
-      const [scoreIncreases, setScoreIncreases] = useState({ STR: 0, DEX: 0, CON: 1, INT: 2, WIS: 0, CHA: 0 });
-      const [examAnswers, setExamAnswers] = useState({});
-      const [selectedRemediation, setSelectedRemediation] = useState(null);
-      const [selectedSkills, setSelectedSkills] = useState(["Arcana", "Performance"]);
-      const [selectedSpells, setSelectedSpells] = useState(["Fire Bolt", "Thunderwave"]);
-      const [selectedWeapon, setSelectedWeapon] = useState("Quarterstaff");
-      
-      const [appearance, setAppearance] = useState({ age: "18", height: "5'10\"", weight: "140 lbs", eyes: "Amber", skin: "Fair", hair: "Dark curls" });
       const [backstory, setBackstory] = useState("");
-      const [flaw, setFlaw] = useState("A crippling insecurity regarding physical clumsy maneuvers");
+      const [showNameBuckets, setShowNameBuckets] = useState(false);
 
-      const [customJobs, setCustomJobs] = useState({ employer: "Firejolt Café", coworker: "Tavern Keep" });
-      const [npcRelationships, setNpcRelationships] = useState([
-        { name: "Rosie Wirthmore", points: 1, relationship: "Art Class Buddy", isFriend: true, isRival: false }
+      // Campus extras
+      const [customJobs] = useState({ employer: "Firejolt Café", coworker: "Tavern Keep" });
+      const [npcRelationships] = useState([
+        { name: "Rosie Wirthmore", points: 1, relationship: "Art Class Buddy" }
       ]);
 
-      // --- CLOUD FETCH ENGINE ---
-      useEffect(() => {
-        const fetchLibraries = async () => {
-          if (!window.firebaseDb) return;
-          try {
-            const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-            const db = window.firebaseDb;
+      // ─── MATH HELPERS ──────────────────────────────────────────────────────────
 
-            // Pull Colleges
-            const colSnap = await getDocs(collection(db, "colleges"));
-            const fetchedColleges = {};
-            colSnap.forEach(doc => fetchedColleges[doc.id] = doc.data());
-            if (Object.keys(fetchedColleges).length > 0) setCloudColleges(fetchedColleges);
+      const getScore  = (stat) => statAssignments[stat] ?? 10;
+      const getMod    = (stat) => Math.floor((getScore(stat) - 10) / 2);
+      const getModStr = (stat) => { const m = getMod(stat); return m >= 0 ? `+${m}` : `${m}`; };
+      const allAssigned = () => Object.values(statAssignments).every(v => v !== null);
+      const getAC  = () => ["Fighter","Barbarian","Paladin"].includes(selectedClass) ? 16 : 10 + getMod("DEX");
+      const getMaxHP = () => (CLASSES[selectedClass]?.hitDie || 8) + getMod("CON");
+      const getSpellAbility = () => COLLEGES[selectedCollege]?.spellcastingAbility || "INT";
+      const getSpellSaveDC = () => 8 + 2 + getMod(getSpellAbility());
+      const getSpellAtk    = () => { const m = getMod(getSpellAbility()); return m >= 0 ? `+${2 + m}` : `${2 + m}`; };
 
-            // Pull Lineages
-            const linSnap = await getDocs(collection(db, "lineages"));
-            const fetchedLineages = {};
-            linSnap.forEach(doc => fetchedLineages[doc.id] = doc.data());
-            if (Object.keys(fetchedLineages).length > 0) setCloudLineages(fetchedLineages);
+      // ─── STATS PHASE LOGIC ─────────────────────────────────────────────────────
 
-            // Pull Classes
-            const clsSnap = await getDocs(collection(db, "classes"));
-            const fetchedClasses = {};
-            clsSnap.forEach(doc => fetchedClasses[doc.id] = doc.data());
-            if (Object.keys(fetchedClasses).length > 0) setCloudClasses(fetchedClasses);
-
-            setDbLoaded(true);
-            console.log("✓ Cloud libraries loaded successfully.");
-          } catch (error) {
-            console.error("Error pulling from Firebase:", error);
-          }
-        };
-        
-        fetchLibraries();
-      }, []);
-
-      const updateBaseScoresBasedOnClass = (className) => {
-        let newBase = { STR: 8, DEX: 12, CON: 13, INT: 10, WIS: 14, CHA: 15 };
-        if (className === "Wizard") newBase = { STR: 8, DEX: 13, CON: 14, INT: 15, WIS: 12, CHA: 10 };
-        else if (className === "Fighter") newBase = { STR: 15, DEX: 13, CON: 14, INT: 8, WIS: 12, CHA: 10 };
-        else if (className === "Rogue") newBase = { STR: 10, DEX: 15, CON: 13, INT: 12, WIS: 14, CHA: 8 };
-        else if (className === "Druid" || className === "Cleric") newBase = { STR: 10, DEX: 12, CON: 13, INT: 8, WIS: 15, CHA: 14 };
-        
-        setBaseScores(newBase);
-        // Uses the cloud-loaded classes map
-        const currentPrimary = cloudClasses[className]?.primary;
-        let newIncreases = { STR: 0, DEX: 0, CON: 0, INT: 0, WIS: 0, CHA: 0 };
-        if (currentPrimary) {
-          newIncreases[currentPrimary] = 2;
-          newIncreases[currentPrimary === "CON" ? "WIS" : "CON"] = 1;
-        }
-        setScoreIncreases(newIncreases);
+      const getAvailableValues = () => {
+        const used = [];
+        for (const v of Object.values(statAssignments)) { if (v !== null) used.push(v); }
+        return STANDARD_ARRAY.filter(v => {
+          const i = used.indexOf(v);
+          if (i !== -1) { used.splice(i, 1); return false; }
+          return true;
+        });
       };
 
+      const handleValueChip = (val) => {
+        setPendingValue(pendingValue === val ? null : val);
+      };
+
+      const handleStatBox = (stat) => {
+        if (pendingValue !== null) {
+          const old = statAssignments[stat];
+          setStatAssignments({ ...statAssignments, [stat]: pendingValue });
+          setPendingValue(old); // return old value to pending (then user clicks away to drop it)
+          if (old === null) setPendingValue(null);
+        } else if (statAssignments[stat] !== null) {
+          setStatAssignments({ ...statAssignments, [stat]: null });
+        }
+      };
+
+      const getStatHints = () => {
+        if (!allAssigned()) return [];
+        const hints = [];
+        const primary = CLASSES[selectedClass]?.primary;
+        const spellAbility = getSpellAbility();
+        for (const stat of Object.keys(statAssignments)) {
+          const score = statAssignments[stat];
+          const mod = getMod(stat);
+          if (stat === primary && score >= 15)
+            hints.push({ type: "star",    text: `⭐ ${STAT_LABELS[stat]} ${score} (${getModStr(stat)}) — Exceptional primary attribute for ${selectedClass}! Your spells will hit harder.` });
+          else if (stat === spellAbility && stat !== primary && score >= 14)
+            hints.push({ type: "college", text: `🎓 ${STAT_LABELS[stat]} ${score} (${getModStr(stat)}) — Strong spellcasting stat for ${selectedCollege} college.` });
+          if (score <= 8)
+            hints.push({ type: "warning", text: `⚠️ ${STAT_LABELS[stat]} ${score} (${getModStr(stat)}) — Proctor Alert: This will create significant vulnerabilities in ${stat === "DEX" ? "ranged/stealth situations" : stat === "CON" ? "hit points and concentration checks" : "related skill checks"}.` });
+        }
+        return hints;
+      };
+
+      const getLowestStat = () => {
+        let low = null; let lowVal = Infinity;
+        for (const [s, v] of Object.entries(statAssignments)) {
+          if (v !== null && v < lowVal) { lowVal = v; low = s; }
+        }
+        return low;
+      };
+
+      // Auto-set flaw when entering Phase 10
       useEffect(() => {
-        updateBaseScoresBasedOnClass(selectedClass);
-      }, [selectedClass, cloudClasses]);
+        const low = getLowestStat();
+        if (low && FLAWS_BY_STAT[low]) setFlaw(FLAWS_BY_STAT[low]);
+      }, [phase]);
 
-      // Math Helpers (Updated to use Cloud variables)
-      const getMod = (stat) => Math.floor((((baseScores[stat] || 10) + (scoreIncreases[stat] || 0)) - 10) / 2);
-      const getModStr = (stat) => getMod(stat) >= 0 ? `+${getMod(stat)}` : `${getMod(stat)}`;
-      const getTotalScore = (stat) => (baseScores[stat] || 10) + (scoreIncreases[stat] || 0);
-      const getAC = () => ["Fighter"].includes(selectedClass) ? 16 : 10 + getMod("DEX");
-      const getMaxHP = () => (cloudClasses[selectedClass]?.hitDie || 8) + getMod("CON") + (selectedLineage === "Dwarf" ? 1 : 0);
-      const getSpellSaveDC = () => 10 + getMod(cloudColleges[selectedCollege]?.spellcastingAbility || "INT");
-      const getSpellAttackBonus = () => 2 + getMod(cloudColleges[selectedCollege]?.spellcastingAbility || "INT");
+      // Auto-reset weapon when class changes
+      useEffect(() => { setSelectedWeapon(""); }, [selectedClass]);
 
-      const handleNextPhase = () => { if (phase < 11) setPhase(phase + 1); };
-      const handlePrevPhase = () => { if (phase > 1) setPhase(phase - 1); };
+      // Auto-reset tool when class changes
+      useEffect(() => { setSelectedTool(""); }, [selectedClass]);
 
-      // --- ADMIN SEEDER: PUSH LOCAL LIBRARIES TO CLOUD ---
+      // ─── SPELL FILTER ──────────────────────────────────────────────────────────
+
+      const getSpellsForClass = (resonance) => {
+        if (!resonance) return [];
+        const cls = selectedClass;
+        const col = selectedCollege;
+        return SPELLS_BY_RESONANCE[resonance].filter(s =>
+          s.classes.includes(cls) || s.classes.includes(col) || s.classes.includes("All")
+        );
+      };
+
+      const getProctorSpellHint = (resonance) => {
+        const dexMod = getMod("DEX");
+        const conMod = getMod("CON");
+        if (!resonance) return null;
+        if (resonance === "Destruction") {
+          if (dexMod <= -1) return "⚠️ Proctor Tip: With low Dexterity, avoid front-line melee confrontations. Prioritize long-range spells and elevation — let enemies come to you.";
+          return "⭐ Proctor Tip: Destruction spells scale with your spellcasting modifier. Prioritize your highest stat for maximum impact.";
+        }
+        if (resonance === "Control") {
+          if (conMod <= -1) return "⚠️ Proctor Tip: Concentration spells are risky with low Constitution. Prioritize non-concentration control spells like Thunderwave to stay mobile.";
+          return "🎓 Proctor Tip: Control spells can turn the entire course of an encounter. One well-placed Entangle can neutralize a whole flank.";
+        }
+        if (resonance === "Harmony") return "✨ Proctor Tip: Support spells create cascading advantages for your entire party. A well-timed Bless can be worth more than any damage spell.";
+        return null;
+      };
+
+      // ─── SKILL TIERS ───────────────────────────────────────────────────────────
+
+      const ACADEMIC_SKILLS = new Set(["Arcana", "History", "Investigation", "Insight", "Perception", "Religion", "Nature"]);
+
+      const getSkillTier = (skill) => {
+        const mod = getMod(skill.stat);
+        if (mod >= 2) return "star";
+        if (ACADEMIC_SKILLS.has(skill.name)) return "academic";
+        if (mod <= -1) return "risk";
+        return "neutral";
+      };
+
+      const tierLabel = { star: "⭐ Optimal — High Stat Synergy", academic: "🧠 Solid Academic", risk: "⚠️ High-Risk — Stat Penalty", neutral: "Balanced" };
+      const tierOrder = ["star", "academic", "neutral", "risk"];
+
+      // ─── FIREBASE ──────────────────────────────────────────────────────────────
+
       const seedDatabase = async () => {
         if (!window.firebaseDb) return alert("Database not connected!");
-        
         try {
           const { doc, setDoc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
           const db = window.firebaseDb;
-
-          console.log("Initiating Cloud Matrix upload...");
-
-          // 1. Upload Colleges
-          for (const [key, data] of Object.entries(COLLEGES)) {
-            await setDoc(doc(db, "colleges", key), data);
-          }
-          // 2. Upload Lineages
-          for (const [key, data] of Object.entries(LINEAGES)) {
-            await setDoc(doc(db, "lineages", key), data);
-          }
-          // 3. Upload Classes
-          for (const [key, data] of Object.entries(CLASSES)) {
-            await setDoc(doc(db, "classes", key), data);
-          }
-
-          alert("Library Seeding Complete! Check your Firebase Console under 'Firestore Database'.");
-        } catch (error) {
-          console.error("Seeding Error:", error);
-          alert("Upload failed. Check console.");
-        }
+          for (const [key, data] of Object.entries(COLLEGES))  await setDoc(doc(db, "colleges",  key), data);
+          for (const [key, data] of Object.entries(LINEAGES))  await setDoc(doc(db, "lineages",  key), data);
+          for (const [key, data] of Object.entries(CLASSES))   await setDoc(doc(db, "classes",   key), data);
+          alert("Library Seeding Complete!");
+        } catch (e) { console.error(e); alert("Upload failed. Check console."); }
       };
 
-      // --- FIREBASE SUBMISSION LOGIC ---
       const submitToFirebase = async () => {
-        if (!window.firebaseDb || !window.studentUid) {
-          alert("Error: Database disconnected. Ensure you are testing over a live URL.");
-          return;
-        }
-
+        if (!window.firebaseDb || !window.studentUid) { alert("Database disconnected."); return; }
         setIsSaving(true);
         try {
           const { setDoc, doc } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
-          
-          const studentPayload = {
-            characterName, playerName, selectedLineage, selectedCollege,
-            selectedClass, selectedClub, selectedStipend, alignment,
-            baseScores, scoreIncreases, examAnswers, selectedSkills,
-            selectedSpells, selectedWeapon, appearance, backstory,
-            flaw, customJobs, npcRelationships,
-            lastUpdated: new Date().toISOString()
-          };
-
-          const docRef = doc(window.firebaseDb, "student_enrollments", window.studentUid);
-          await setDoc(docRef, studentPayload, { merge: true });
-          
-          alert("Registration Submitted successfully to Firebase Database!");
-        } catch (error) {
-          console.error("Save Error:", error);
-          alert("Failed to save to cloud. Check developer console.");
-        }
+          await setDoc(doc(window.firebaseDb, "student_enrollments", window.studentUid), {
+            characterName, playerName, selectedLineage, selectedSize, selectedCollege, selectedClass,
+            selectedClub, selectedStipend, selectedTool, selectedWeapon, alignment,
+            statAssignments, selectedSkills, selectedSpells, resonanceType,
+            selectedTrait, selectedIdeal, selectedBond, flaw, backstory,
+            customJobs, npcRelationships, lastUpdated: new Date().toISOString()
+          }, { merge: true });
+          alert("Student File submitted to Strixhaven Cloud!");
+        } catch (e) { console.error(e); alert("Failed to save. Check console."); }
         setIsSaving(false);
       };
 
-      return (
-        <div className="flex flex-col lg:flex-row h-screen">
-          {/* LEFT COLUMN: THE NARRATIVE PROCTOR EXAM PANEL */}
-          <section className="w-full lg:w-1/2 p-4 md:p-6 border-r border-slate-800 flex flex-col justify-between bg-slate-900/40 overflow-y-auto">
-            <div>
-              <header className="mb-6 border-b border-amber-500/30 pb-4">
-                <h1 className="text-xl font-bold tracking-wider text-amber-400 font-serif"><i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN UNIVERSITY</h1>
-                <p className="text-xs text-slate-400 tracking-widest uppercase">Entrance Assessment Phase {phase} of 11</p>
-                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
-                  <div className="bg-gradient-to-r from-amber-600 to-amber-400 h-full transition-all" style={{ width: `${(phase / 11) * 100}%` }}></div>
-                </div>
-              </header>
+      // ─── NAVIGATION ────────────────────────────────────────────────────────────
 
-              {/* Exam Content Switches */}
-              {phase === 1 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-bolt mr-2"></i>Phase 1: Core Scenarios</h3>
-                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800">
-                    <p className="text-sm font-semibold text-amber-500 mb-2">Scenario: The Runaway Device</p>
-                    <div className="grid grid-cols-1 gap-2">
-                      {[
-                        { key: "A", label: "Duck underneath with high agility", stat: "DEX" },
-                        { key: "B", label: "Attempt to block it physically", stat: "STR" },
-                        { key: "C", label: "Chant a verbal dampening command", stat: "INT" }
-                      ].map(opt => (
-                        <button key={opt.key} onClick={() => setExamAnswers({...examAnswers, scenario1: opt.key})} className={`text-left p-3 text-xs rounded-lg border ${examAnswers.scenario1 === opt.key ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-950 border-slate-800 text-slate-300"}`}>
-                          {opt.label} <span className="float-right text-[10px] text-slate-500">({opt.stat})</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+      const handleNext = () => { if (phase < 11) setPhase(phase + 1); };
+      const handlePrev = () => { if (phase > 1)  setPhase(phase - 1); };
 
-              {phase === 2 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-compass mr-2"></i>Phase 2: Remediation</h3>
-                  {[{ id: "local", title: "The Hard-Working Local", bonus: "+1 Constitution" }, { id: "scholar", title: "The Stubborn Scholar", bonus: "+1 Intelligence" }].map(item => (
-                    <button key={item.id} onClick={() => setSelectedRemediation(item.id)} className={`w-full text-left p-4 rounded-xl border ${selectedRemediation === item.id ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
-                      <p className="font-bold text-amber-400">{item.title}</p>
-                      <p className="text-xs text-emerald-400 mt-1">{item.bonus}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
+      // ─── PHASE RENDER ──────────────────────────────────────────────────────────
 
-              {/* Using Cloud Variables for Lineages */}
-              {phase === 3 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-user mr-2"></i>Phase 3: Species Registry</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {Object.keys(cloudLineages).map(key => (
-                      <button key={key} onClick={() => setSelectedLineage(key)} className={`p-4 rounded-xl border text-left ${selectedLineage === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800"}`}>
-                        <p className="font-bold text-amber-400">{cloudLineages[key].name}</p>
+      const renderPhase = () => {
+        const lineage  = LINEAGES[selectedLineage]  || {};
+        const cls      = CLASSES[selectedClass]     || {};
+        const college  = COLLEGES[selectedCollege]  || {};
+        const club     = CLUBS[selectedClub]        || {};
+        const toolData = TOOLS_BY_CLASS[selectedClass] || { label: "Tool / Kit", options: [] };
+
+        switch (phase) {
+          /* ── PHASE 1: LINEAGE & SIZE ── */
+          case 1: return (
+            <div className="space-y-4">
+              <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                "Welcome, prospective student. Before we can proceed with your academic evaluation, the university registry requires that we document your biological lineage. Please state your species and, where applicable, your physical scale."
+              </div>
+              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-dna mr-2"></i>Phase 1: Core Lineage & Size</h3>
+              <div className="grid grid-cols-3 gap-2">
+                {Object.keys(LINEAGES).map(key => (
+                  <button key={key} onClick={() => { setSelectedLineage(key); const l = LINEAGES[key]; setSelectedSize(l.sizeOptions[0]); }}
+                    className={`p-3 rounded-xl border text-left transition-all ${selectedLineage === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 hover:border-amber-500/40"}`}>
+                    <p className="font-bold text-amber-400 text-xs">{key}</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">{LINEAGES[key].sizeOptions.join(" / ")}</p>
+                  </button>
+                ))}
+              </div>
+              {lineage.sizeOptions && lineage.sizeOptions.length > 1 && (
+                <div>
+                  <p className="text-xs text-amber-300 font-semibold mb-2">Select Physical Scale:</p>
+                  <div className="flex gap-2">
+                    {lineage.sizeOptions.map(sz => (
+                      <button key={sz} onClick={() => setSelectedSize(sz)}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold border ${selectedSize === sz ? "bg-amber-500/20 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-400"}`}>
+                        {sz}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
-
-              {phase === 4 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-users mr-2"></i>Phase 4: Clubs</h3>
-                  {Object.keys(CLUBS).map(key => (
-                    <button key={key} onClick={() => setSelectedClub(key)} className={`w-full p-3 rounded-xl border text-left ${selectedClub === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
-                      <p className="font-bold">{CLUBS[key].name}</p>
-                      <p className="text-xs text-slate-400">{CLUBS[key].description}</p>
-                    </button>
-                  ))}
+              {lineage.traits && (
+                <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700 space-y-1.5">
+                  <p className="text-[10px] uppercase font-bold text-amber-500 tracking-wider">Species Traits</p>
+                  {lineage.traits.map((t, i) => <p key={i} className="text-xs text-slate-300">• {t}</p>)}
+                  {lineage.darkvision > 0 && <p className="text-xs text-slate-300">• Darkvision: {lineage.darkvision} ft.</p>}
+                  {lineage.speed && <p className="text-xs text-slate-300">• Speed: {lineage.speed} ft.</p>}
                 </div>
               )}
-
-              {/* Using Cloud Variables for Colleges */}
-              {phase === 5 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-book-open mr-2"></i>Phase 5: College Alignment</h3>
-                  {Object.keys(cloudColleges).map(key => (
-                    <button key={key} onClick={() => setSelectedCollege(key)} className={`w-full p-4 rounded-xl border text-left ${selectedCollege === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
-                      <p className="font-bold">{cloudColleges[key].name}</p>
-                      <p className="text-xs text-slate-400">{cloudColleges[key].motto}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Using Cloud Variables for Classes */}
-              {phase === 6 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-medal mr-2"></i>Phase 6: Core Class Selection</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.keys(cloudClasses).map(key => (
-                      <button key={key} onClick={() => setSelectedClass(key)} className={`p-3 rounded-lg border text-left ${selectedClass === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
-                        <span className="font-bold">{cloudClasses[key].name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {phase === 7 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-swords mr-2"></i>Phase 7: Equipment</h3>
-                  {Object.keys(STIPEND_KITS).map(key => (
-                    <button key={key} onClick={() => setSelectedStipend(key)} className={`w-full p-3 rounded-xl border text-left ${selectedStipend === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-300"}`}>
-                      <p className="font-bold">{STIPEND_KITS[key].name}</p>
-                    </button>
-                  ))}
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {["Rapier", "Quarterstaff", "Dagger", "Light Crossbow"].map(wep => (
-                      <button key={wep} onClick={() => setSelectedWeapon(wep)} className={`px-3 py-1.5 rounded-lg text-xs border ${selectedWeapon === wep ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-950 border-slate-800 text-slate-400"}`}>{wep}</button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {phase === 8 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-wand-magic-sparkles mr-2"></i>Phase 8: Spells</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {["Fire Bolt", "Ray of Frost", "Vicious Mockery", "Thunderwave", "Shield", "Guidance"].map(spell => {
-                      const isSelected = selectedSpells.includes(spell);
-                      return (
-                        <button key={spell} onClick={() => { isSelected ? setSelectedSpells(selectedSpells.filter(s => s !== spell)) : (selectedSpells.length < 3 && setSelectedSpells([...selectedSpells, spell])) }} className={`p-3 rounded-xl border text-xs text-left ${isSelected ? "bg-amber-500/25 border-amber-500 text-amber-200" : "bg-slate-900 border-slate-800 text-slate-400"}`}>
-                          {spell}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {phase === 9 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-square-check mr-2"></i>Phase 9: Skills</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    {SKILL_LIST.map(skill => {
-                      const isSelected = selectedSkills.includes(skill.name);
-                      return (
-                        <button key={skill.name} onClick={() => { isSelected ? setSelectedSkills(selectedSkills.filter(s => s !== skill.name)) : (selectedSkills.length < 4 && setSelectedSkills([...selectedSkills, skill.name])) }} className={`p-2.5 rounded-lg border text-xs text-left ${isSelected ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-900 border-slate-800 text-slate-400"}`}>
-                          {skill.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {phase === 10 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-shield-halved mr-2"></i>Phase 10: Alignment</h3>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[ { title: "Passionate Rebel", align: "Chaotic Good" }, { title: "Ensemble Player", align: "Neutral Good" }, { title: "Free Spirit", align: "Chaotic Neutral" }].map(item => (
-                      <button key={item.title} onClick={() => { setAlignmentStyle(item.title); setAlignment(item.align); }} className={`p-3 rounded-lg border text-xs text-left ${alignmentStyle === item.title ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-950 border-slate-800 text-slate-400"}`}>
-                        <p className="font-bold">{item.title}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {phase === 11 && (
-                <div className="space-y-4">
-                  <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-file-lines mr-2"></i>Phase 11: File Completion</h3>
-                  <div className="bg-slate-900/60 p-4 rounded-xl border border-slate-800 space-y-3">
-                    <input type="text" value={characterName} onChange={(e) => setCharacterName(e.target.value)} placeholder="Character Name" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs" />
-                    <input type="text" value={playerName} onChange={(e) => setPlayerName(e.target.value)} placeholder="Player Name" className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs" />
-                    <textarea value={backstory} onChange={(e) => setBackstory(e.target.value)} placeholder="Short backstory draft..." className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs h-24" />
-                  </div>
+              {lineage.proctorHint && (
+                <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200">
+                  <span className="font-bold text-amber-400">📋 Proctor Hint: </span>{lineage.proctorHint}
                 </div>
               )}
             </div>
+          );
+
+          /* ── PHASE 2: CLASS ── */
+          case 2: return (
+            <div className="space-y-4">
+              <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                "Every student arrives with an academic specialty. Which martial or arcane discipline defines your primary training? This will determine your combat resilience, weapon proficiencies, and spellcasting framework."
+              </div>
+              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-medal mr-2"></i>Phase 2: Core Class Selection</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.keys(CLASSES).map(key => {
+                  const c = CLASSES[key];
+                  return (
+                    <button key={key} onClick={() => setSelectedClass(key)}
+                      className={`p-3 rounded-xl border text-left transition-all ${selectedClass === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 hover:border-amber-500/40"}`}>
+                      <p className="font-bold text-amber-400 text-xs">{c.name}</p>
+                      <p className="text-[9px] text-slate-500">d{c.hitDie} HP · {c.primary} primary</p>
+                    </button>
+                  );
+                })}
+              </div>
+              {cls.name && (
+                <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700 space-y-1.5">
+                  <p className="text-[10px] uppercase font-bold text-amber-500 tracking-wider">{cls.name} — Class Details</p>
+                  <p className="text-xs text-slate-300">• Hit Die: d{cls.hitDie}</p>
+                  <p className="text-xs text-slate-300">• Primary Attribute: {STAT_LABELS[cls.primary]}</p>
+                  <p className="text-xs text-slate-300">• Saving Throws: {cls.saves.map(s => STAT_LABELS[s]).join(", ")}</p>
+                  <p className="text-xs text-slate-300">• Starting Weapons: {cls.weapons.join(", ")}</p>
+                  <p className="text-xs text-slate-400 italic mt-1">{cls.description}</p>
+                </div>
+              )}
+            </div>
+          );
+
+          /* ── PHASE 3: COLLEGE ── */
+          case 3: return (
+            <div className="space-y-4">
+              <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                "Strixhaven is divided into five distinct colleges, each representing a unique philosophical and magical tradition. Your college will provide your background proficiencies, a magical feat, and your narrative identity on campus."
+              </div>
+              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-book-open mr-2"></i>Phase 3: Campus College Alignment</h3>
+              <div className="space-y-2">
+                {Object.keys(COLLEGES).map(key => {
+                  const c = COLLEGES[key];
+                  return (
+                    <button key={key} onClick={() => setSelectedCollege(key)}
+                      className={`w-full p-3 rounded-xl border text-left transition-all ${selectedCollege === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 hover:border-amber-500/40"}`}>
+                      <div className="flex items-center gap-2">
+                        <i className={`fa-solid ${c.icon} text-amber-400 w-4`}></i>
+                        <p className="font-bold text-amber-400 text-xs">{c.name}</p>
+                      </div>
+                      <p className="text-[10px] text-slate-400 italic mt-0.5 ml-6">"{c.motto}"</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5 ml-6">Skills: {c.skills.join(", ")} · Feat: {c.feat}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              {college.name && (
+                <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200">
+                  <p className="font-bold text-amber-400 mb-1">📋 {college.name} Enrollment Package</p>
+                  <p>• Textbook: <span className="text-amber-300">{college.primer}</span></p>
+                  <p>• College Spells: <span className="text-amber-300">{college.spells.join(", ")}</span></p>
+                  <p>• Spellcasting Ability: <span className="text-amber-300">{STAT_LABELS[college.spellcastingAbility]}</span></p>
+                </div>
+              )}
+            </div>
+          );
+
+          /* ── PHASE 4: CLUBS ── */
+          case 4: return (
+            <div className="space-y-4">
+              <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                "Beyond academic work, Strixhaven students are expected to participate in campus life. Your extracurricular activity will earn you a Student Die (d4) — a bonus die for specific skill checks on school grounds."
+              </div>
+              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-users mr-2"></i>Phase 4: Extracurricular Activities</h3>
+              <div className="space-y-2">
+                {Object.keys(CLUBS).map(key => {
+                  const c = CLUBS[key];
+                  return (
+                    <button key={key} onClick={() => setSelectedClub(key)}
+                      className={`w-full p-3 rounded-xl border text-left transition-all ${selectedClub === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 hover:border-amber-500/40"}`}>
+                      <p className="font-bold text-xs">{c.name}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{c.description}</p>
+                      <p className="text-[10px] text-emerald-400 mt-0.5">Bonus Skills: {c.skills.join(", ")} · Contact: {c.npc}</p>
+                    </button>
+                  );
+                })}
+              </div>
+              {club.name && (
+                <div className="bg-emerald-950/30 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-200">
+                  <span className="font-bold">🎲 Student Die: </span>Roll a d4 and add it to {club.skills.join(" or ")} checks made on school grounds while affiliated with the {club.name}.
+                </div>
+              )}
+            </div>
+          );
+
+          /* ── PHASE 5: STAT MATRIX ── */
+          case 5: {
+            const available = getAvailableValues();
+            const hints = getStatHints();
+            return (
+              <div className="space-y-4">
+                <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                  "The Attribute Matrix records your core aptitudes. Assign the Standard Academic Array below — click a value, then click a stat to place it. Click an assigned stat to reclaim its value."
+                </div>
+                <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-table-cells mr-2"></i>Phase 5: Attribute Matrix</h3>
+
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">Standard Array — Click to Select</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {STANDARD_ARRAY.map((val, i) => {
+                      const used = Object.values(statAssignments).filter(v => v === val).length;
+                      const total = STANDARD_ARRAY.filter(v => v === val).length;
+                      const isAvail = used < total;
+                      if (!isAvail) return null;
+                      return (
+                        <button key={i} onClick={() => handleValueChip(val)}
+                          className={`w-10 h-10 rounded-lg font-bold text-sm border-2 transition-all ${pendingValue === val ? "bg-amber-500 border-amber-300 text-slate-900 scale-110" : "bg-slate-800 border-slate-600 text-amber-200 hover:border-amber-500"}`}>
+                          {val}
+                        </button>
+                      );
+                    })}
+                    {available.length === 0 && <p className="text-xs text-slate-400 italic">All values assigned.</p>}
+                  </div>
+                  {pendingValue !== null && <p className="text-xs text-amber-400 mt-1 animate-pulse">▶ Now click a stat box to assign <strong>{pendingValue}</strong></p>}
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {["STR","DEX","CON","INT","WIS","CHA"].map(stat => {
+                    const val = statAssignments[stat];
+                    const mod = val !== null ? Math.floor((val - 10) / 2) : null;
+                    const isPrimary = CLASSES[selectedClass]?.primary === stat;
+                    return (
+                      <button key={stat} onClick={() => handleStatBox(stat)}
+                        className={`p-3 rounded-xl border-2 text-center transition-all cursor-pointer
+                          ${pendingValue !== null ? "hover:border-amber-400 hover:bg-amber-500/10" : "hover:border-slate-600"}
+                          ${isPrimary ? "border-amber-500/60" : "border-slate-700"}
+                          ${val !== null ? "bg-slate-800" : "bg-slate-900/50"}`}>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase block">{stat}{isPrimary ? " ★" : ""}</span>
+                        {val !== null ? (
+                          <>
+                            <span className="text-xl font-extrabold text-amber-300 block">{mod >= 0 ? `+${mod}` : mod}</span>
+                            <span className="text-xs text-slate-400">{val}</span>
+                          </>
+                        ) : (
+                          <span className="text-xl text-slate-600 block">—</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {hints.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] uppercase font-bold text-amber-500 tracking-wider">Proctor Analysis</p>
+                    {hints.map((h, i) => (
+                      <div key={i} className={`p-2 rounded-lg text-xs ${h.type === "warning" ? "bg-red-950/40 border border-red-500/30 text-red-200" : h.type === "star" ? "bg-amber-950/40 border border-amber-500/30 text-amber-200" : "bg-teal-950/40 border border-teal-500/30 text-teal-200"}`}>
+                        {h.text}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          /* ── PHASE 6: TOOLS ── */
+          case 6: return (
+            <div className="space-y-4">
+              <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                "Every practitioner requires a physical conduit or specialized tool to channel their craft. For arcane spellcasters, this is their focus. For performers, their instrument. Select your primary implement below."
+              </div>
+              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-wrench mr-2"></i>Phase 6: Specialized Tool & Instrument</h3>
+              <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700">
+                <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">{toolData.label}</p>
+                <div className="flex flex-wrap gap-2">
+                  {toolData.options.map(opt => (
+                    <button key={opt} onClick={() => setSelectedTool(opt)}
+                      className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${selectedTool === opt ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-950 border-slate-700 text-slate-400 hover:border-amber-500/40"}`}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {selectedTool && (
+                <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200">
+                  <span className="font-bold text-amber-400">✓ Selected: </span>{selectedTool}
+                  {(selectedClass === "Bard") && <p className="mt-1 text-slate-300">This instrument functions as your Spellcasting Focus and is noted on your equipment manifest.</p>}
+                  {(["Wizard","Sorcerer","Warlock"].includes(selectedClass)) && <p className="mt-1 text-slate-300">This arcane focus can substitute for any material component without a listed cost.</p>}
+                </div>
+              )}
+            </div>
+          );
+
+          /* ── PHASE 7: EQUIPMENT ── */
+          case 7: return (
+            <div className="space-y-4">
+              <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                "All enrolled students receive a standard college package. Additionally, the bursar's office provides a one-time stipend kit based on your declared academic focus."
+              </div>
+              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-briefcase mr-2"></i>Phase 7: Equipment Manifest</h3>
+
+              <div>
+                <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">Standard College Package (All Students)</p>
+                <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700 text-xs text-slate-300 space-y-1">
+                  <p>• School Uniform + {college.name || selectedCollege} Crest</p>
+                  <p>• Writing Supplies (Quill & Ink)</p>
+                  <p>• <span className="text-amber-300">{college.primer || "College Primer"}</span> (3 charges: +1d4 to college skill checks)</p>
+                  <p>• 10 Gold Pieces</p>
+                  <p>• Cuddly Strixhaven Mascot (1/day: auto-succeed on Frightened save)</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">Stipend Kit Selection</p>
+                {Object.keys(STIPEND_KITS).map(key => (
+                  <button key={key} onClick={() => setSelectedStipend(key)}
+                    className={`w-full p-3 rounded-xl border text-left mb-2 transition-all ${selectedStipend === key ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 hover:border-amber-500/40"}`}>
+                    <p className="font-bold text-xs">{STIPEND_KITS[key].name}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{STIPEND_KITS[key].contents}</p>
+                  </button>
+                ))}
+              </div>
+
+              <div>
+                <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">Starting Weapon</p>
+                <div className="flex flex-wrap gap-2">
+                  {(cls.weapons || []).map(wep => (
+                    <button key={wep} onClick={() => setSelectedWeapon(wep)}
+                      className={`px-3 py-1.5 rounded-lg text-xs border transition-all ${selectedWeapon === wep ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-950 border-slate-700 text-slate-400 hover:border-amber-500/40"}`}>
+                      {wep}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          );
+
+          /* ── PHASE 8: SPELLS ── */
+          case 8: return (
+            <div className="space-y-4">
+              <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                "The Resonance Test will calibrate your spellbook to your magical signature. First, declare your primary combat philosophy. Then select up to 3 spells from the curated list."
+              </div>
+              <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-wand-magic-sparkles mr-2"></i>Phase 8: Arcane Tuning</h3>
+
+              <div>
+                <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">Resonance Test — Select Your Combat Philosophy</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {["Destruction","Control","Harmony"].map(res => (
+                    <button key={res} onClick={() => { setResonanceType(res); setSelectedSpells([]); }}
+                      className={`p-3 rounded-xl border text-center text-xs font-bold transition-all ${resonanceType === res ? "bg-amber-500/20 border-amber-500 text-amber-200" : "bg-slate-900 border-slate-800 text-slate-400 hover:border-amber-500/40"}`}>
+                      <div className="text-lg mb-1">{res === "Destruction" ? "💥" : res === "Control" ? "⚙️" : "✨"}</div>
+                      {res}
+                      <p className="text-[9px] font-normal text-slate-500 mt-0.5">{res === "Destruction" ? "Damage & Offense" : res === "Control" ? "Debuff & Zone" : "Support & Utility"}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {resonanceType && (
+                <>
+                  {getProctorSpellHint(resonanceType) && (
+                    <div className="bg-amber-950/30 border border-amber-500/30 rounded-xl p-3 text-xs text-amber-200">
+                      <span className="font-bold text-amber-400">📋 Proctor Guidance: </span>{getProctorSpellHint(resonanceType)}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">
+                      Curated {resonanceType} Spells ({selectedSpells.length}/3 selected)
+                    </p>
+                    <div className="grid grid-cols-1 gap-1.5">
+                      {getSpellsForClass(resonanceType).map(spell => {
+                        const isSel = selectedSpells.includes(spell.name);
+                        return (
+                          <button key={spell.name} onClick={() => isSel
+                            ? setSelectedSpells(selectedSpells.filter(s => s !== spell.name))
+                            : selectedSpells.length < 3 && setSelectedSpells([...selectedSpells, spell.name])}
+                            className={`p-2.5 rounded-xl border text-left transition-all ${isSel ? "bg-amber-500/20 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-400 hover:border-amber-500/40"} ${!isSel && selectedSpells.length >= 3 ? "opacity-40 cursor-not-allowed" : ""}`}>
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-xs">{spell.name}</span>
+                              <span className="text-[9px] text-slate-500">{spell.level}</span>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{spell.desc}</p>
+                          </button>
+                        );
+                      })}
+                      {getSpellsForClass(resonanceType).length === 0 && (
+                        <p className="text-xs text-slate-500 italic p-2">No {resonanceType} spells available for {selectedClass}. The Proctor suggests selecting from your college's provided spells: {college.spells?.join(", ")}.</p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+
+          /* ── PHASE 9: SKILLS ── */
+          case 9: {
+            const grouped = {};
+            tierOrder.forEach(t => grouped[t] = []);
+            SKILL_LIST.forEach(sk => {
+              const tier = allAssigned() ? getSkillTier(sk) : "neutral";
+              grouped[tier].push(sk);
+            });
+            const collegeSkills = new Set(college.skills || []);
+            const max = (CLASSES[selectedClass]?.primary === "CHA" || selectedClass === "Bard") ? 4 : 3;
+            return (
+              <div className="space-y-4">
+                <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                  "Select {max} additional skills from the Academic Aptitude register. Skills are ranked by your current attribute modifiers. Choose wisely — the ⚠️ flagged skills carry a statistical penalty."
+                </div>
+                <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-square-check mr-2"></i>Phase 9: Academic Aptitude ({selectedSkills.length}/{max})</h3>
+                {tierOrder.filter(t => grouped[t].length > 0).map(tier => (
+                  <div key={tier}>
+                    <p className="text-[10px] uppercase font-bold text-slate-500 mb-1.5 tracking-wider">{tierLabel[tier]}</p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {grouped[tier].map(skill => {
+                        const isSel = selectedSkills.includes(skill.name);
+                        const isCollege = collegeSkills.has(skill.name);
+                        return (
+                          <button key={skill.name} onClick={() => isSel
+                            ? setSelectedSkills(selectedSkills.filter(s => s !== skill.name))
+                            : selectedSkills.length < max && setSelectedSkills([...selectedSkills, skill.name])}
+                            className={`p-2 rounded-lg border text-xs text-left transition-all
+                              ${isSel ? "bg-amber-500/20 border-amber-500 text-amber-200" : tier === "risk" ? "bg-red-950/20 border-red-900/40 text-red-300 hover:border-red-500/60" : tier === "star" ? "bg-amber-950/20 border-amber-900/30 text-amber-300 hover:border-amber-500/40" : "bg-slate-900 border-slate-800 text-slate-400 hover:border-amber-500/30"}
+                              ${!isSel && selectedSkills.length >= max ? "opacity-40 cursor-not-allowed" : ""}`}>
+                            <span className="block font-semibold">{skill.name}</span>
+                            <span className="text-[9px] opacity-70">{skill.stat}{isCollege ? " ★" : ""}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+                {!allAssigned() && <p className="text-xs text-slate-500 italic">Complete the Attribute Matrix (Phase 5) to see skill tier rankings.</p>}
+              </div>
+            );
+          }
+
+          /* ── PHASE 10: DISPOSITION ── */
+          case 10: {
+            const alignKeys = Object.keys(ALIGNMENTS);
+            const curAlign = ALIGNMENTS[alignment];
+            return (
+              <div className="space-y-4">
+                <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                  "The Disposition Evaluation assesses your moral and ethical orientation within campus society. This determines how you approach conflicts between personal ethics, academic rules, and community welfare."
+                </div>
+                <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-shield-halved mr-2"></i>Phase 10: Disposition & Ethics</h3>
+
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-amber-500 mb-2 tracking-wider">Campus Alignment Grid</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {alignKeys.map(key => (
+                      <button key={key} onClick={() => setAlignment(key)}
+                        className={`p-2 rounded-lg border text-center text-xs transition-all ${alignment === key ? "bg-amber-500/20 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-400 hover:border-amber-500/40"}`}>
+                        <p className="font-bold text-[10px]">{ALIGNMENTS[key].archetype}</p>
+                        <p className="text-[9px] text-slate-500 mt-0.5">{key}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {curAlign && (
+                  <div className="bg-slate-900/60 p-3 rounded-xl border border-slate-700 text-xs text-slate-300">
+                    <p className="font-bold text-amber-400 mb-1">{curAlign.archetype}</p>
+                    <p className="italic">{curAlign.description}</p>
+                  </div>
+                )}
+
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-amber-500 mb-1.5 tracking-wider">Personality Trait</p>
+                  <div className="space-y-1">
+                    {PERSONALITY_TRAITS.map(t => (
+                      <button key={t} onClick={() => setSelectedTrait(t)}
+                        className={`w-full text-left p-2 rounded-lg border text-xs transition-all ${selectedTrait === t ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-400 hover:border-amber-500/30"}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-amber-500 mb-1.5 tracking-wider">Ideal</p>
+                  <div className="space-y-1">
+                    {IDEALS.map(t => (
+                      <button key={t} onClick={() => setSelectedIdeal(t)}
+                        className={`w-full text-left p-2 rounded-lg border text-xs transition-all ${selectedIdeal === t ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-400 hover:border-amber-500/30"}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-amber-500 mb-1.5 tracking-wider">Bond</p>
+                  <div className="space-y-1">
+                    {BONDS.map(t => (
+                      <button key={t} onClick={() => setSelectedBond(t)}
+                        className={`w-full text-left p-2 rounded-lg border text-xs transition-all ${selectedBond === t ? "bg-amber-500/10 border-amber-500 text-amber-100" : "bg-slate-900 border-slate-800 text-slate-400 hover:border-amber-500/30"}`}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-red-400 mb-1.5 tracking-wider">
+                    ⚠️ Flaw — Statistical Link
+                    {getLowestStat() && <span className="text-slate-500 font-normal"> (Linked to low {getLowestStat()})</span>}
+                  </p>
+                  <textarea value={flaw} onChange={e => setFlaw(e.target.value)}
+                    className="w-full bg-slate-950 border border-red-900/40 rounded-lg px-3 py-2 text-xs text-red-200 h-16 resize-none" />
+                  <div className="grid grid-cols-2 gap-1 mt-1">
+                    {Object.keys(FLAWS_BY_STAT).map(st => (
+                      <button key={st} onClick={() => setFlaw(FLAWS_BY_STAT[st])}
+                        className="text-left text-[9px] px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-500 hover:text-red-300 hover:border-red-800 transition-all">
+                        {STAT_LABELS[st]} flaw
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          /* ── PHASE 11: ENROLLMENT ── */
+          case 11: {
+            const lineageNames = NAME_BUCKETS.lineage[selectedLineage] || NAME_BUCKETS.lineage.default;
+            const collegeNames = NAME_BUCKETS.college[selectedCollege] || NAME_BUCKETS.college.default;
+            const low = getLowestStat();
+            const ironicNames = low ? (NAME_BUCKETS.ironic[low] || NAME_BUCKETS.ironic.default) : NAME_BUCKETS.ironic.default;
+            return (
+              <div className="space-y-4">
+                <div className="bg-slate-800/60 p-3 rounded-xl border border-amber-500/20 text-xs text-amber-200/80 italic">
+                  "All that remains is the official enrollment signature. Please inscribe your name on the university register. This document is legally binding within all five planes recognized by the Strixhaven Academic Senate."
+                </div>
+                <h3 className="text-amber-400 font-bold text-lg"><i className="fa-solid fa-file-signature mr-2"></i>Phase 11: Enrollment Signature</h3>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-amber-500 tracking-wider block mb-1">Character Name</label>
+                    <input type="text" value={characterName} onChange={e => setCharacterName(e.target.value)}
+                      placeholder="Enter your character's name..." className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-amber-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-amber-500 tracking-wider block mb-1">Player Name</label>
+                    <input type="text" value={playerName} onChange={e => setPlayerName(e.target.value)}
+                      placeholder="Your real name..." className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-amber-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] uppercase font-bold text-amber-500 tracking-wider block mb-1">Backstory Draft</label>
+                    <textarea value={backstory} onChange={e => setBackstory(e.target.value)}
+                      placeholder="Where did you come from? What brought you to Strixhaven? What do you hope to achieve?"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 h-24 resize-none focus:border-amber-500 outline-none" />
+                  </div>
+                </div>
+                <button onClick={() => setShowNameBuckets(!showNameBuckets)}
+                  className="w-full py-2 bg-slate-800 border border-amber-500/30 text-amber-400 rounded-lg text-xs font-semibold hover:bg-amber-500/10 transition-all">
+                  <i className="fa-solid fa-lightbulb mr-2"></i>{showNameBuckets ? "Hide" : "Need a Name? — Generate Ideas"}
+                </button>
+                {showNameBuckets && (
+                  <div className="space-y-3">
+                    {[
+                      { label: NAME_BUCKETS.lineage.label, names: lineageNames },
+                      { label: NAME_BUCKETS.college.label, names: collegeNames },
+                      { label: NAME_BUCKETS.ironic.label,  names: ironicNames }
+                    ].map(bucket => (
+                      <div key={bucket.label}>
+                        <p className="text-[10px] font-bold text-amber-500 mb-1.5">{bucket.label}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {bucket.names.map(name => (
+                            <button key={name} onClick={() => setCharacterName(name)}
+                              className="px-2.5 py-1 bg-slate-900 border border-slate-700 text-slate-300 rounded-lg text-xs hover:border-amber-500 hover:text-amber-300 transition-all">
+                              {name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          default: return null;
+        }
+      };
+
+      // ─── CHARACTER SHEET ───────────────────────────────────────────────────────
+
+      const college = COLLEGES[selectedCollege] || {};
+      const cls     = CLASSES[selectedClass]    || {};
+
+      const renderSheet = () => {
+        switch (activeSheetTab) {
+          case 1: return (
+            <div className="space-y-4">
+              <div className="border-b-2 border-[#2c2214] pb-3">
+                <span className="text-[9px] uppercase text-[#66543b] font-bold tracking-wider">Character Name</span>
+                <h2 className="text-lg font-bold font-serif">{characterName || "Unnamed Student"}</h2>
+                <p className="text-xs text-[#66543b] mt-0.5">{cls.name || "—"} 1 · {selectedCollege} · {selectedLineage}{selectedSize !== "Medium" ? ` (${selectedSize})` : ""} · {alignment}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {["STR","DEX","CON","INT","WIS","CHA"].map(stat => {
+                  const isPrimary = cls.primary === stat;
+                  const score = statAssignments[stat];
+                  const mod = score !== null ? Math.floor((score - 10) / 2) : null;
+                  return (
+                    <div key={stat} className={`border-2 rounded-xl p-2 bg-[#f9f5eb] text-center shadow-sm ${isPrimary ? "border-amber-600" : "border-[#2c2214]"}`}>
+                      <span className="text-[8px] font-bold text-slate-500 uppercase">{stat}{isPrimary ? " ★" : ""}</span>
+                      <span className="text-sm font-extrabold block text-amber-900">{mod !== null ? (mod >= 0 ? `+${mod}` : mod) : "—"}</span>
+                      <span className="text-[10px] font-mono">{score ?? "—"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="border border-[#2c2214]/30 rounded-lg p-2 bg-[#f9f5eb] text-center text-xs font-bold"><span className="text-[8px] block text-slate-500 uppercase">AC</span>{allAssigned() ? getAC() : "—"}</div>
+                <div className="border border-[#2c2214]/30 rounded-lg p-2 bg-[#f9f5eb] text-center text-xs font-bold"><span className="text-[8px] block text-slate-500 uppercase">Initiative</span>{allAssigned() ? getModStr("DEX") : "—"}</div>
+                <div className="border border-[#2c2214]/30 rounded-lg p-2 bg-[#f9f5eb] text-center text-xs font-bold text-emerald-900"><span className="text-[8px] block text-slate-500 uppercase">Max HP</span>{allAssigned() ? getMaxHP() : "—"}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="border border-[#2c2214]/20 rounded-lg p-2 bg-[#f9f5eb]"><span className="text-[8px] uppercase text-slate-500 block">Speed</span>{(LINEAGES[selectedLineage]?.speed || 30)} ft.</div>
+                <div className="border border-[#2c2214]/20 rounded-lg p-2 bg-[#f9f5eb]"><span className="text-[8px] uppercase text-slate-500 block">Darkvision</span>{(LINEAGES[selectedLineage]?.darkvision || 0) > 0 ? `${LINEAGES[selectedLineage].darkvision} ft.` : "None"}</div>
+              </div>
+              {selectedSkills.length > 0 && (
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-[#66543b] tracking-wider block mb-1">Proficient Skills</span>
+                  <div className="flex flex-wrap gap-1">
+                    {selectedSkills.map(s => <span key={s} className="text-[10px] bg-amber-100 text-amber-900 px-2 py-0.5 rounded-full border border-amber-300">{s}</span>)}
+                    {(college.skills || []).map(s => !selectedSkills.includes(s) && <span key={s} className="text-[10px] bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full border border-blue-300">{s} ★</span>)}
+                  </div>
+                </div>
+              )}
+              {selectedWeapon && (
+                <div className="border border-[#2c2214]/20 rounded-lg p-2 bg-[#f9f5eb] text-xs">
+                  <span className="text-[8px] uppercase text-slate-500 block">Starting Weapon</span>
+                  {selectedWeapon}{selectedTool ? ` · ${selectedTool}` : ""}
+                </div>
+              )}
+            </div>
+          );
+
+          case 2: return (
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1">Backstory & Persona</h3>
+              <div className="bg-[#faf7f0] p-3 rounded-xl border border-[#2c2214]/20 text-xs leading-relaxed font-serif min-h-[100px]">
+                {backstory || <span className="text-slate-400 italic">No backstory recorded.</span>}
+              </div>
+              {selectedTrait && <div className="text-xs"><span className="text-[9px] uppercase font-bold text-[#66543b] block mb-0.5">Personality Trait</span><p className="italic">{selectedTrait}</p></div>}
+              {selectedIdeal && <div className="text-xs"><span className="text-[9px] uppercase font-bold text-[#66543b] block mb-0.5">Ideal</span><p className="italic">{selectedIdeal}</p></div>}
+              {selectedBond  && <div className="text-xs"><span className="text-[9px] uppercase font-bold text-[#66543b] block mb-0.5">Bond</span><p className="italic">{selectedBond}</p></div>}
+              {flaw          && <div className="text-xs"><span className="text-[9px] uppercase font-bold text-red-700 block mb-0.5">Flaw</span><p className="italic text-red-800">{flaw}</p></div>}
+              <div className="text-xs"><span className="text-[9px] uppercase font-bold text-[#66543b] block mb-0.5">Alignment</span><p>{alignment} — {ALIGNMENTS[alignment]?.archetype || ""}</p></div>
+            </div>
+          );
+
+          case 3: return (
+            <div className="space-y-3">
+              <div className="flex justify-between items-end border-b border-[#2c2214] pb-1">
+                <h3 className="text-sm font-bold font-serif text-amber-900">Spellbook</h3>
+                <div className="text-right text-xs">
+                  <div><span className="text-[8px] uppercase text-slate-500">Save DC</span> <span className="font-bold">{allAssigned() ? getSpellSaveDC() : "—"}</span></div>
+                  <div><span className="text-[8px] uppercase text-slate-500">Atk Bonus</span> <span className="font-bold">{allAssigned() ? getSpellAtk() : "—"}</span></div>
+                  <div><span className="text-[8px] uppercase text-slate-500">Ability</span> <span className="font-bold">{STAT_LABELS[getSpellAbility()]}</span></div>
+                </div>
+              </div>
+              {college.spells?.length > 0 && (
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-[#66543b] block mb-1">College Spells ({college.name})</span>
+                  {college.spells.map(s => <div key={s} className="bg-blue-50 border border-blue-200 p-1.5 rounded mb-1 text-xs font-semibold text-blue-900">{s}</div>)}
+                </div>
+              )}
+              {selectedSpells.length > 0 && (
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-[#66543b] block mb-1">Selected Spells</span>
+                  {selectedSpells.map(s => <div key={s} className="bg-white/80 p-1.5 rounded border border-[#2c2214]/10 mb-1 text-xs font-semibold">{s}</div>)}
+                </div>
+              )}
+              {selectedSpells.length === 0 && college.spells?.length === 0 && <p className="text-xs text-slate-400 italic">No spells recorded yet.</p>}
+            </div>
+          );
+
+          case 4: return (
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1">Strixhaven Campus File</h3>
+              <div className="bg-[#faf7f0] border border-[#2c2214]/20 p-3 rounded-lg text-xs space-y-1">
+                <p className="font-bold text-amber-950">{college.name || "—"} College</p>
+                <p className="text-slate-600">Primer: {college.primer || "—"}</p>
+                <p className="text-slate-600">Feat: {college.feat || "—"}</p>
+              </div>
+              <div className="bg-[#faf7f0] border border-[#2c2214]/20 p-3 rounded-lg text-xs">
+                <p className="font-bold text-amber-950">{CLUBS[selectedClub]?.name || "No club selected"}</p>
+                <p className="text-slate-600 mt-0.5">Contact: {CLUBS[selectedClub]?.npc || "—"}</p>
+                <span className="text-[10px] bg-amber-900 text-white px-2 py-0.5 rounded-full mt-1.5 inline-block">Student Die d4</span>
+              </div>
+              <div className="bg-[#faf7f0] border border-[#2c2214]/20 p-3 rounded-lg text-xs">
+                <p className="font-bold text-amber-950">Job: {customJobs.employer}</p>
+                <p className="text-slate-600">Stipend Kit: {STIPEND_KITS[selectedStipend]?.name || "—"}</p>
+              </div>
+              <div>
+                <span className="text-[9px] uppercase font-bold text-slate-500 block mb-1">NPC Relationships</span>
+                {npcRelationships.map((npc, i) => (
+                  <p key={i} className="text-xs bg-white p-2 rounded border border-[#2c2214]/10 mb-1">{npc.name} — {npc.relationship} ({npc.points} pts)</p>
+                ))}
+              </div>
+            </div>
+          );
+
+          default: return null;
+        }
+      };
+
+      // ─── RENDER ────────────────────────────────────────────────────────────────
+
+      return (
+        <div className="flex flex-col lg:flex-row h-screen">
+
+          {/* LEFT: EXAM PANEL */}
+          <section className="w-full lg:w-1/2 p-4 md:p-6 border-r border-slate-800 flex flex-col justify-between bg-slate-900/40 overflow-y-auto">
+            <div>
+              <header className="mb-5 border-b border-amber-500/30 pb-4">
+                <h1 className="text-xl font-bold tracking-wider text-amber-400 font-serif">
+                  <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN UNIVERSITY
+                </h1>
+                <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">Entrance Assessment — Phase {phase} of 11</p>
+                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
+                  <div className="bg-gradient-to-r from-amber-600 to-amber-400 h-full transition-all duration-500"
+                    style={{ width: `${(phase / 11) * 100}%` }}></div>
+                </div>
+                <div className="flex mt-2 gap-0.5">
+                  {Array.from({length: 11}, (_, i) => (
+                    <button key={i} onClick={() => setPhase(i + 1)}
+                      className={`flex-1 h-1 rounded-full transition-all ${i + 1 <= phase ? "bg-amber-500" : "bg-slate-700"}`} />
+                  ))}
+                </div>
+              </header>
+              {renderPhase()}
+            </div>
 
             <div className="mt-6 border-t border-slate-800/80 pt-4 flex justify-between items-center">
-              <button onClick={handlePrevPhase} disabled={phase === 1} className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 rounded-lg text-xs font-semibold">Previous</button>
-              
-              {/* SECRET ADMIN SEEDER BUTTON */}
-              <button onClick={seedDatabase} className="px-4 py-2 bg-purple-900 hover:bg-purple-800 text-white rounded-lg text-xs font-semibold">
-                <i className="fa-solid fa-database mr-2"></i> Seed Firestore Libraries
+              <button onClick={handlePrev} disabled={phase === 1}
+                className="px-4 py-2 bg-slate-900 border border-slate-800 text-slate-300 disabled:opacity-40 rounded-lg text-xs font-semibold hover:border-amber-500/40 transition-all">
+                ← Previous
+              </button>
+
+              <button onClick={seedDatabase}
+                className="px-3 py-2 bg-purple-950/60 hover:bg-purple-900/60 border border-purple-800/40 text-purple-400 rounded-lg text-xs font-semibold transition-all">
+                <i className="fa-solid fa-database mr-1"></i> Seed DB
               </button>
 
               {phase < 11 ? (
-                <button onClick={handleNextPhase} className="px-5 py-2 bg-amber-600 text-white rounded-lg text-xs font-semibold">Next Phase</button>
+                <button onClick={handleNext}
+                  className="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold shadow transition-all">
+                  Next Phase →
+                </button>
               ) : (
-                <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg">
-                  <i className="fa-solid fa-cloud-arrow-up mr-2"></i> {isSaving ? "Syncing..." : "Submit to Firebase"}
+                <button onClick={submitToFirebase} disabled={isSaving}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
+                  <i className="fa-solid fa-cloud-arrow-up mr-2"></i>{isSaving ? "Syncing…" : "Submit File"}
                 </button>
               )}
             </div>
           </section>
 
-          {/* RIGHT COLUMN: THE LIVE-UPDATING 4-PAGE CHARACTER SHEET PREVIEW */}
-          <section className="w-full lg:w-1/2 p-4 md:p-6 bg-slate-800/30 flex flex-col gap-4 overflow-y-auto">
+          {/* RIGHT: CHARACTER SHEET */}
+          <section className="w-full lg:w-1/2 p-4 md:p-6 bg-slate-800/30 flex flex-col gap-3 overflow-y-auto">
             <div className="flex gap-2 border-b border-slate-800 pb-3">
-              {[ { id: 1, label: "Page 1: Core" }, { id: 2, label: "Page 2: Backstory" }, { id: 3, label: "Page 3: Spells" }, { id: 4, label: "Page 4: Campus" } ].map(tab => (
-                <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-800"}`}>
+              {[
+                { id: 1, label: "Core Stats" },
+                { id: 2, label: "Backstory" },
+                { id: 3, label: "Spellbook" },
+                { id: 4, label: "Campus" }
+              ].map(tab => (
+                <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-800 hover:border-amber-500/40"}`}>
                   {tab.label}
                 </button>
               ))}
             </div>
 
-            <div className="flex-1 bg-[#fdfaf2] text-[#2c2214] p-5 rounded-2xl border-4 border-[#ded1ba]">
-              {activeSheetTab === 1 && (
-                <div className="space-y-4">
-                  <div className="border-b-2 border-[#2c2214] pb-4">
-                    <span className="text-[10px] uppercase text-[#66543b] font-bold">Character Name</span>
-                    <h2 className="text-xl font-bold font-serif">{characterName || "Unnamed Recruits"}</h2>
-                    <p className="text-xs font-bold text-slate-500 mt-1">{selectedClass} 1 | {selectedCollege} | {selectedLineage} | {alignment}</p>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    {Object.keys(baseScores).map(stat => (
-                      <div key={stat} className="border-2 border-[#2c2214] rounded-xl p-2 bg-[#f9f5eb] text-center shadow-sm">
-                        <span className="text-[9px] font-bold text-slate-500 uppercase">{stat}</span>
-                        <span className="text-base font-extrabold block text-amber-900">{getModStr(stat)}</span>
-                        <span className="text-xs font-mono">{getTotalScore(stat)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mt-2">
-                     <div className="border border-[#2c2214]/30 rounded p-2 bg-[#f9f5eb] text-center text-xs font-bold"><span className="text-[9px] block text-slate-500">AC</span>{getAC()}</div>
-                     <div className="border border-[#2c2214]/30 rounded p-2 bg-[#f9f5eb] text-center text-xs font-bold"><span className="text-[9px] block text-slate-500">INIT</span>{getModStr("DEX")}</div>
-                     <div className="border border-[#2c2214]/30 rounded p-2 bg-[#f9f5eb] text-center text-xs font-bold text-emerald-900"><span className="text-[9px] block text-slate-500">HP</span>{getMaxHP()}</div>
-                  </div>
-                </div>
-              )}
-
-              {activeSheetTab === 2 && (
-                <div>
-                   <h3 className="text-base font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1">Backstory & Traits</h3>
-                   <div className="mt-4 bg-[#faf7f0] p-4 rounded-xl border border-[#2c2214]/20 text-xs leading-relaxed font-serif min-h-[150px]">
-                      {backstory || "No backstory recorded."}
-                   </div>
-                   <p className="mt-4 text-xs italic text-red-900">Flaw: {flaw}</p>
-                </div>
-              )}
-
-              {activeSheetTab === 3 && (
-                <div>
-                  <div className="flex justify-between items-end border-b border-[#2c2214] pb-2">
-                    <h3 className="text-base font-bold font-serif text-amber-900">Spellbook</h3>
-                    <div className="text-right text-xs"><span className="text-[9px] block uppercase text-slate-500">Save DC</span><span className="font-bold">{getSpellSaveDC()}</span></div>
-                  </div>
-                  <div className="mt-4 grid gap-2 text-xs">
-                     {selectedSpells.map(s => (
-                       <div key={s} className="bg-white/80 p-2 rounded border border-[#2c2214]/10 font-semibold">{s}</div>
-                     ))}
-                  </div>
-                </div>
-              )}
-
-              {activeSheetTab === 4 && (
-                <div className="space-y-4">
-                  <h3 className="text-base font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1">Strixhaven Progress</h3>
-                  <div className="bg-[#faf7f0] border border-[#2c2214]/20 p-3 rounded text-xs">
-                     <p className="font-bold text-amber-950">Active Club: {selectedClub}</p>
-                     <span className="text-[10px] bg-amber-900 text-white px-2 py-0.5 rounded-full mt-1 inline-block">Bonus: Student Die d4</span>
-                  </div>
-                  <div className="bg-[#faf7f0] border border-[#2c2214]/20 p-3 rounded text-xs">
-                     <p className="font-bold text-amber-950">Starting Job: {customJobs.employer}</p>
-                  </div>
-                  <div>
-                    <span className="text-[10px] uppercase font-bold text-slate-500 block mb-1">NPC Relationships</span>
-                    {npcRelationships.map((npc, idx) => (
-                      <p key={idx} className="text-xs bg-white p-2 rounded border border-[#2c2214]/10">{npc.name} ({npc.relationship}) - {npc.points} Pts</p>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div className="flex-1 bg-[#fdfaf2] text-[#2c2214] p-5 rounded-2xl border-4 border-[#ded1ba] overflow-y-auto shadow-inner">
+              {renderSheet()}
             </div>
+
+            {playerName && (
+              <div className="text-center text-[10px] text-slate-600 font-mono tracking-wider">
+                Student UID: {window.studentUid || "LOCAL SESSION"} · Player: {playerName}
+              </div>
+            )}
           </section>
+
         </div>
       );
     }
 
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
+
 </body>
 </html>
