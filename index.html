@@ -94,7 +94,7 @@
       Tiefling: { name: "Tiefling", sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Hellish Resistance: Resistance to Fire damage.", "Otherworldly Gaze: Thaumaturgy cantrip + Hellish Rebuke + Darkness spells."] },
       Gnome:    { name: "Gnome",    sizeOptions: ["Small"],           speed: 30, darkvision: 60,  traits: ["Gnome Cunning: Advantage on all INT, WIS, and CHA saving throws against magic."] },
       Halfling: { name: "Halfling", sizeOptions: ["Small"],           speed: 30, darkvision: 0,   traits: ["Lucky: Reroll a natural 1 on any d20 roll.", "Brave: Advantage on saves vs. being Frightened.", "Halfling Nimbleness: Move through the space of larger creatures."] },
-      Aasimar:  { name: "Aasimar",  sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Celestial Resistance: Resistance to Necrotic and Radiant damage.", "Healing Hands: Restore HP equal to d4s × Proficiency Bonus as an action.", "Celestial Revelation at 3rd level."] },
+      Aasimar:  { name: "Aasimar",  sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Celestial Resistance: Resistance to Necrotic and Radiant damage.", "Healing Hands: Restore HP equal to d4s x Proficiency Bonus as an action.", "Celestial Revelation at 3rd level."] },
       Orc:      { name: "Orc",      sizeOptions: ["Medium"],          speed: 30, darkvision: 120, traits: ["Adrenaline Rush: Bonus action Dash + Temporary HP.", "Powerful Build: Count as one size larger for carrying capacity.", "Relentless Endurance: Drop to 1 HP instead of 0 HP, once per Long Rest."] }
     };
 
@@ -231,19 +231,19 @@
 
     const NAME_BUCKETS = {
       lineage: {
-        label: "ðŸ§¬ Lineage / Heritage Names",
+        label: "🧬 Lineage / Heritage Names",
         Owlin: ["Sylvara", "Morrith", "Talvyn", "Hoowyn", "Feathrix", "Vespa"],
         Human: ["Calder", "Mira", "Theron", "Sable", "Evyn", "Rowan"],
         default: ["Caelum", "Liriel", "Varis", "Sera", "Thorn", "Evren"]
       },
       college: {
-        label: "ðŸŽ“ College / Aesthetic Names",
+        label: "🎓 College / Aesthetic Names",
         Prismari: ["Blazara", "Frostwick", "Stormsong", "Emberholt", "Galewing", "Cinder"],
         Silverquill: ["Inkborne", "Quillstrike", "Shadevoice", "Pencraft", "Blottrix", "Crimsontongue"],
         default: ["Stardust", "Prismway", "Wandermere", "Brightquill", "Lorewright", "Aethon"]
       },
       ironic: {
-        label: "ðŸ˜… Ironic / Flaw-Contrast Names",
+        label: "😅 Ironic / Flaw-Contrast Names",
         DEX: ["Grace", "Nimble", "Swift", "Fleetfoot", "Sure-Step", "Airy"],
         STR: ["Atlas", "Boulder", "Ironside", "Grit", "Hefty", "Titan"],
         default: ["Serendipity", "Fortuna", "Brilliance", "Ironwill", "Destiny", "Triumph"]
@@ -281,7 +281,7 @@
       const [characterName, setCharacterName] = useState("");
       const [playerName, setPlayerName] = useState("");
       const [backstory, setBackstory] = useState("");
-      const [customJobs] = useState({ employer: "Firejolt CafÃ©", coworker: "Tavern Keep" });
+      const [customJobs] = useState({ employer: "Firejolt Cafe", coworker: "Tavern Keep" });
       const [npcRelationships] = useState([{ name: "Rosie Wirthmore", points: 1, relationship: "Art Class Buddy" }]);
 
       const getScore  = (stat) => statAssignments[stat] ?? 10;
@@ -484,7 +484,7 @@ Flaw: ${flaw}
                   <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
                 </div>
                 <div className="bg-indigo-950/60 border border-indigo-500/20 px-3 py-2 rounded-xl rounded-tl-sm text-xs text-indigo-300 italic">
-                  <i className="fa-solid fa-ellipsis fa-fade mr-1 text-indigo-400"></i>Proctor is writingâ€¦
+                  <i className="fa-solid fa-ellipsis fa-fade mr-1 text-indigo-400"></i>Proctor is writing...
                 </div>
               </div>
             )}
@@ -496,7 +496,7 @@ Flaw: ${flaw}
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
-              placeholder="Speak to the Admissions Proctorâ€¦"
+              placeholder="Speak to the Admissions Proctor..."
               className="flex-1 bg-slate-950 border border-indigo-900/50 rounded-lg px-3 py-2 text-xs text-indigo-100 focus:border-indigo-500 outline-none placeholder:text-indigo-800"
             />
             <button
@@ -519,7 +519,7 @@ Flaw: ${flaw}
             <div className="space-y-4">
               <div className="border-b-2 border-[#2c2214] pb-3">
                 <h2 className="text-lg font-bold font-serif">{characterName || "Unnamed Student"}</h2>
-                <p className="text-xs text-[#66543b] mt-0.5">{cls.name || "â€”"} 1 Â· {selectedCollege} Â· {selectedLineage} Â· {alignment}</p>
+                <p className="text-xs text-[#66543b] mt-0.5">{cls.name || "-"} 1 • {selectedCollege} • {selectedLineage} • {alignment}</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {["STR","DEX","CON","INT","WIS","CHA"].map(stat => {
@@ -528,7 +528,7 @@ Flaw: ${flaw}
                   return (
                     <div key={stat} className="border-2 rounded-xl p-2 bg-[#f9f5eb] text-center shadow-sm border-[#2c2214]">
                       <span className="text-[8px] font-bold text-slate-500 uppercase">{stat}</span>
-                      <span className="text-sm font-extrabold block text-amber-900">{mod !== null ? (mod >= 0 ? `+${mod}` : mod) : "â€”"}</span>
+                      <span className="text-sm font-extrabold block text-amber-900">{mod !== null ? (mod >= 0 ? `+${mod}` : mod) : "-"}</span>
                     </div>
                   );
                 })}
@@ -554,7 +554,7 @@ Flaw: ${flaw}
 
       return (
         <div className="flex flex-col lg:flex-row h-screen">
-          {/* LEFT: PROCTOR CHAT â€” Sole driver of the application */}
+          {/* LEFT: PROCTOR CHAT - Sole driver of the application */}
           <section className="w-full lg:w-1/2 border-r border-slate-800 flex flex-col bg-slate-900/40 overflow-hidden">
             <div className="px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
               <header className="mb-4 border-b border-amber-500/30 pb-4">
@@ -562,7 +562,7 @@ Flaw: ${flaw}
                   <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN UNIVERSITY
                 </h1>
                 <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">
-                  Admissions Proctor â€” Phase {phase} of 11
+                  Admissions Proctor - Phase {phase} of 11
                 </p>
                 <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
                   <div className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full transition-all duration-500" style={{ width: `${(phase / 11) * 100}%` }}></div>
@@ -573,7 +573,7 @@ Flaw: ${flaw}
             <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-6 pb-4 pt-1">
               <div className="text-[10px] text-indigo-400/60 uppercase tracking-wider pb-2 flex items-center gap-2 flex-shrink-0">
                 <i className="fa-solid fa-circle-dot fa-beat text-indigo-500/70 text-[8px]"></i>
-                Live Session â€” Phase {phase} active
+                Live Session - Phase {phase} active
               </div>
               {renderChat()}
             </div>
