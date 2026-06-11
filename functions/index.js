@@ -48,43 +48,56 @@ exports.strixhavenConsultant = onCall(
     {secrets: ["GEMINI_API_KEY"]},
     async (request) => {
       try {
-        // 1. Unpack the exact data sent by React
         const requestData = request.data || {};
         const chatHistory = requestData.chatHistory || [];
         const latestMessage = requestData.latestMessage || "Introduce yourself and begin Phase 1.";
         const gameData = requestData.gameData || {};
 
-        // 2. Format the React chat history into Gemini's specific history format
-        // We pop the very last message off, because the frontend includes the user's newest message in this array, 
-        // and Gemini wants the new message sent separately.
-        const historyForGemini = chatHistory.slice(0, -1).map(msg => ({
+        // 1. Map frontend history to Gemini's expected schema
+        let historyForGemini = chatHistory.slice(0, -1).map(msg => ({
           role: msg.role === 'proctor' ? 'model' : 'user',
           parts: [{ text: msg.text }]
         }));
 
+        // 2. CRITICAL FIX: Strip any leading 'model' messages so the history strictly starts with 'user'
+        while (historyForGemini.length > 0 && historyForGemini[0].role === 'model') {
+          historyForGemini.shift();
+        }
+
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({
-          model: "gemini-3.5-flash",
-          systemInstruction: PROCTOR_INSTRUCTIONS,
-          generationConfig: {
-              responseMimeType: "application/json", // This forces Gemini to only output JSON!
-          }
-        });
-
-        // 3. Boot up the conversational memory
-        const chat = model.startChat({
-          history: historyForGemini,
-        });
-
-        // 4. Send the new prompt, injecting the current phase's data silently into the background
         const prompt = `[SYSTEM BACKGROUND DATA FOR CURRENT PHASE: ${JSON.stringify(gameData)}]\n\nSTUDENT SAYS: ${latestMessage}`;
-        
-        const result = await chat.sendMessage(prompt);
-        const responseText = result.response.text();
-        
-        // 5. Parse the JSON string into an actual object and send it back to React
-        const jsonResponse = JSON.parse(responseText);
-        return jsonResponse;
+
+        // --- THE FALLBACK CASCADE ---
+        const fallbackChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
+        let responseText = null;
+        let lastError = null;
+
+        for (const modelName of fallbackChain) {
+          try {
+            const model = genAI.getGenerativeModel({
+              model: modelName,
+              systemInstruction: PROCTOR_INSTRUCTIONS,
+              generationConfig: { responseMimeType: "application/json" }
+            });
+            
+            const chat = model.startChat({ history: historyForGemini });
+            const result = await chat.sendMessage(prompt);
+            
+            responseText = result.response.text();
+            console.log(`Success! Biblioplex powered by: ${modelName}`);
+            break; 
+            
+          } catch (error) {
+            console.warn(`Traffic jam or error on ${modelName}, pivoting to next fallback...`);
+            lastError = error; 
+          }
+        }
+
+        if (!responseText) {
+          throw lastError; 
+        }
+
+        return JSON.parse(responseText);
 
       } catch (error) {
         console.error("Proctor Error:", error);
