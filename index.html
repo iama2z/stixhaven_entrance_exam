@@ -17,7 +17,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    // NEW: We imported 'getDoc' to read existing student files
+    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
@@ -41,6 +42,7 @@
     window.firebaseAuth = auth;
     window.firestoreDoc = doc;
     window.firestoreSetDoc = setDoc;
+    window.firestoreGetDoc = getDoc; // Mapped for React to use
 
     const askStrixhavenConsultant = httpsCallable(functions, 'strixhavenConsultant');
     window.askAdmissionsAI = async (chatHistory, latestMessage, gameData) => {
@@ -52,24 +54,16 @@
         return result.data;
     };
 
-    async function initializePlayerSession() {
+    // We still log them in anonymously in the background so Firebase lets them talk to the database
+    async function initializeSession() {
       try {
-        const userCredential = await signInAnonymously(auth);
-        console.log("✓ Authenticated with Strixhaven Cloud. Student UID:", userCredential.user.uid);
-        window.studentUid = userCredential.user.uid;
+        await signInAnonymously(auth);
+        console.log("✓ Connected to Strixhaven Mainframe.");
       } catch (error) {
-        console.warn("⚠️ Firebase Auth blocked or offline. Switching to Local Session Mode.", error.message);
-        let localUid = localStorage.getItem("strixhaven_local_uid");
-        if (!localUid) {
-          localUid = "offline_student_" + Math.random().toString(36).substr(2, 9);
-          localStorage.setItem("strixhaven_local_uid", localUid);
-        }
-        console.log("✓ Local Sandbox Session Active. Student UID:", localUid);
-        window.studentUid = localUid;
+        console.warn("⚠️ Firebase Auth blocked. Local mode only.", error.message);
       }
     }
-    
-    initializePlayerSession();
+    initializeSession();
   </script>
 
   <script type="text/babel">
@@ -79,188 +73,74 @@
     const STAT_LABELS = { STR: "Strength", DEX: "Dexterity", CON: "Constitution", INT: "Intelligence", WIS: "Wisdom", CHA: "Charisma" };
 
     const COLLEGES = {
-      Prismari:    { name: "Prismari",    primer: "Prismari Primer",     feat: "Prismari Initiate",    skills: ["Acrobatics", "Performance"],    spellcastingAbility: "CHA", spells: ["Fire Bolt", "Ray of Frost", "Shield"],              motto: "Express yourself with raw elemental power.",       color: "from-orange-600 to-red-600",    icon: "fa-fire" },
-      Silverquill: { name: "Silverquill", primer: "Silverquill Statement",feat: "Silverquill Initiate", skills: ["Intimidation", "Persuasion"],   spellcastingAbility: "CHA", spells: ["Sacred Flame", "Vicious Mockery", "Guiding Bolt"], motto: "Words are weapons; wield them with style.",        color: "from-slate-600 to-zinc-700",    icon: "fa-feather-pointed" },
-      Quandrix:    { name: "Quandrix",    primer: "Quandrix Query",        feat: "Quandrix Initiate",    skills: ["Arcana", "Investigation"],      spellcastingAbility: "INT", spells: ["Guidance", "Mage Hand", "Entangle"],              motto: "Reality is a formula waiting to be rewritten.",   color: "from-teal-600 to-green-700",    icon: "fa-infinity" },
-      Witherbloom: { name: "Witherbloom", primer: "Witherbloom Wasting",  feat: "Witherbloom Initiate", skills: ["Animal Handling", "Nature"],    spellcastingAbility: "WIS", spells: ["Chill Touch", "Spare the Dying", "Cure Wounds"],  motto: "Grow, decay, and channel the organic weave.",     color: "from-green-800 to-emerald-900", icon: "fa-seedling" },
-      Lorehold:    { name: "Lorehold",    primer: "Lorehold Ledger",      feat: "Lorehold Initiate",    skills: ["History", "Religion"],          spellcastingAbility: "INT", spells: ["Light", "Sacred Flame", "Comprehend Languages"],  motto: "Dig deep into the past to light the future.",     color: "from-amber-700 to-yellow-800",  icon: "fa-scroll" }
+      Prismari:    { name: "Prismari",    spellcastingAbility: "CHA" },
+      Silverquill: { name: "Silverquill", spellcastingAbility: "CHA" },
+      Quandrix:    { name: "Quandrix",    spellcastingAbility: "INT" },
+      Witherbloom: { name: "Witherbloom", spellcastingAbility: "WIS" },
+      Lorehold:    { name: "Lorehold",    spellcastingAbility: "INT" }
     };
 
     const LINEAGES = {
-      Owlin:    { name: "Owlin",    sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 120, traits: ["Flight: Flying speed equal to walking speed.", "Silent Feathers: Proficiency in Stealth."] },
-      Human:    { name: "Human",    sizeOptions: ["Medium"],          speed: 30, darkvision: 0,   traits: ["Resourceful: Gain Heroic Inspiration after a Long Rest.", "Versatile: Gain one Origin Feat at character creation."] },
-      Elf:      { name: "Elf",      sizeOptions: ["Medium"],          speed: 30, darkvision: 60,  traits: ["Fey Ancestry: Advantage on saves vs. Charmed; magic cannot put you to sleep.", "Trance: 4 hours of meditation counts as a Long Rest.", "Keen Senses: Proficiency in Perception."] },
-      Dwarf:    { name: "Dwarf",    sizeOptions: ["Medium"],          speed: 25, darkvision: 60,  traits: ["Dwarven Resilience: Advantage on Poison saves; Poison resistance.", "Stonecunning: Double Proficiency Bonus on History checks about stonework."] },
-      Tiefling: { name: "Tiefling", sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Hellish Resistance: Resistance to Fire damage.", "Otherworldly Gaze: Thaumaturgy cantrip + Hellish Rebuke + Darkness spells."] },
-      Gnome:    { name: "Gnome",    sizeOptions: ["Small"],           speed: 30, darkvision: 60,  traits: ["Gnome Cunning: Advantage on all INT, WIS, and CHA saving throws against magic."] },
-      Halfling: { name: "Halfling", sizeOptions: ["Small"],           speed: 30, darkvision: 0,   traits: ["Lucky: Reroll a natural 1 on any d20 roll.", "Brave: Advantage on saves vs. being Frightened.", "Halfling Nimbleness: Move through the space of larger creatures."] },
-      Aasimar:  { name: "Aasimar",  sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Celestial Resistance: Resistance to Necrotic and Radiant damage.", "Healing Hands: Restore HP equal to d4s x Proficiency Bonus as an action.", "Celestial Revelation at 3rd level."] },
-      Orc:      { name: "Orc",      sizeOptions: ["Medium"],          speed: 30, darkvision: 120, traits: ["Adrenaline Rush: Bonus action Dash + Temporary HP.", "Powerful Build: Count as one size larger for carrying capacity.", "Relentless Endurance: Drop to 1 HP instead of 0 HP, once per Long Rest."] }
+      Owlin:    { name: "Owlin",    sizeOptions: ["Small", "Medium"] },
+      Human:    { name: "Human",    sizeOptions: ["Medium"] },
+      Elf:      { name: "Elf",      sizeOptions: ["Medium"] },
+      Dwarf:    { name: "Dwarf",    sizeOptions: ["Medium"] },
+      Tiefling: { name: "Tiefling", sizeOptions: ["Small", "Medium"] },
+      Gnome:    { name: "Gnome",    sizeOptions: ["Small"] },
+      Halfling: { name: "Halfling", sizeOptions: ["Small"] },
+      Aasimar:  { name: "Aasimar",  sizeOptions: ["Small", "Medium"] },
+      Orc:      { name: "Orc",      sizeOptions: ["Medium"] }
     };
 
     const CLASSES = {
-      Bard:      { name: "Bard",      hitDie: 8,  primary: "CHA", saves: ["DEX", "CHA"], weapons: ["Rapier", "Longsword", "Dagger", "Light Crossbow"] },
-      Cleric:    { name: "Cleric",    hitDie: 8,  primary: "WIS", saves: ["WIS", "CHA"], weapons: ["Mace", "Warhammer", "Light Crossbow"] },
-      Druid:     { name: "Druid",     hitDie: 8,  primary: "WIS", saves: ["INT", "WIS"], weapons: ["Scimitar", "Quarterstaff", "Sickle"] },
-      Fighter:   { name: "Fighter",   hitDie: 10, primary: "STR", saves: ["STR", "CON"], weapons: ["Greatsword", "Longsword", "Longbow", "Handaxe"] },
-      Monk:      { name: "Monk",      hitDie: 8,  primary: "DEX", saves: ["STR", "DEX"], weapons: ["Shortsword", "Dart"] },
-      Paladin:   { name: "Paladin",   hitDie: 10, primary: "STR", saves: ["WIS", "CHA"], weapons: ["Longsword", "Warhammer", "Javelin"] },
-      Ranger:    { name: "Ranger",    hitDie: 10, primary: "DEX", saves: ["STR", "DEX"], weapons: ["Shortsword", "Longbow", "Handaxe"] },
-      Rogue:     { name: "Rogue",     hitDie: 8,  primary: "DEX", saves: ["DEX", "INT"], weapons: ["Rapier", "Shortbow", "Dagger"] },
-      Sorcerer:  { name: "Sorcerer",  hitDie: 6,  primary: "CHA", saves: ["CON", "CHA"], weapons: ["Dagger", "Light Crossbow"] },
-      Warlock:   { name: "Warlock",   hitDie: 8,  primary: "CHA", saves: ["WIS", "CHA"], weapons: ["Dagger", "Light Crossbow"] },
-      Wizard:    { name: "Wizard",    hitDie: 6,  primary: "INT", saves: ["INT", "WIS"], weapons: ["Quarterstaff", "Dagger"] },
-      Barbarian: { name: "Barbarian", hitDie: 12, primary: "STR", saves: ["STR", "CON"], weapons: ["Greataxe", "Handaxe", "Javelin"] }
+      Bard:      { name: "Bard",      hitDie: 8,  primary: "CHA" },
+      Cleric:    { name: "Cleric",    hitDie: 8,  primary: "WIS" },
+      Druid:     { name: "Druid",     hitDie: 8,  primary: "WIS" },
+      Fighter:   { name: "Fighter",   hitDie: 10, primary: "STR" },
+      Monk:      { name: "Monk",      hitDie: 8,  primary: "DEX" },
+      Paladin:   { name: "Paladin",   hitDie: 10, primary: "STR" },
+      Ranger:    { name: "Ranger",    hitDie: 10, primary: "DEX" },
+      Rogue:     { name: "Rogue",     hitDie: 8,  primary: "DEX" },
+      Sorcerer:  { name: "Sorcerer",  hitDie: 6,  primary: "CHA" },
+      Warlock:   { name: "Warlock",   hitDie: 8,  primary: "CHA" },
+      Wizard:    { name: "Wizard",    hitDie: 6,  primary: "INT" },
+      Barbarian: { name: "Barbarian", hitDie: 12, primary: "STR" }
     };
 
     const CLUBS = {
-      "Fine Artists":       { name: "Distinguished Society of Fine Artists",    skills: ["Performance", "Sleight of Hand"], npc: "Rosie Wirthmore (Year 1)" },
-      "LARP Guild":         { name: "LARP Guild",                                skills: ["Acrobatics", "Deception"],        npc: "Grayson Wildemere (Year 1)" },
-      "Strixhaven Star":    { name: "Strixhaven Star Newspaper",                 skills: ["Investigation", "Insight"],       npc: "Jenevelle Rill (Year 1)" },
-      "Drama Society":      { name: "Campus Drama Society",                      skills: ["Performance", "Persuasion"],      npc: "Cadoras Damellawar (Year 1)" },
-      "Silkball Club":      { name: "Intramural Silkball Club",                  skills: ["Athletics", "Acrobatics"],        npc: "Zanther Bowen (Year 1)" }
-    };
-
-    const ALIGNMENTS = {
-      "Lawful Good":    { archetype: "The Model Prefect",          grid: [0,0] },
-      "Neutral Good":   { archetype: "The Dedicated Ensemble Player", grid: [1,0] },
-      "Chaotic Good":   { archetype: "The Passionate Rebel",       grid: [2,0] },
-      "Lawful Neutral": { archetype: "The Rigid Formalist",        grid: [0,1] },
-      "True Neutral":   { archetype: "The Focused Academic Artist", grid: [1,1] },
-      "Chaotic Neutral":{ archetype: "The Free-Spirited Maverick", grid: [2,1] },
-      "Lawful Evil":    { archetype: "The Ruthless Curve-Setter",  grid: [0,2] },
-      "Neutral Evil":   { archetype: "The Unscrupulous Careerist", grid: [1,2] },
-      "Chaotic Evil":   { archetype: "The Anarchic Disruptor",     grid: [2,2] }
+      "Fine Artists":       { name: "Distinguished Society of Fine Artists" },
+      "LARP Guild":         { name: "LARP Guild" },
+      "Strixhaven Star":    { name: "Strixhaven Star Newspaper" },
+      "Drama Society":      { name: "Campus Drama Society" },
+      "Silkball Club":      { name: "Intramural Silkball Club" }
     };
 
     const STIPEND_KITS = {
-      "Star Performer":      { name: "Star Performer Kit",       contents: "Custom instrument of choice, premium enchanted ink & paints, leather performance notebook, silk ceremonial sash." },
-      "Stealthy Archivist":  { name: "Stealthy Archivist Kit",   contents: "Hooded lantern, steel hand-mirror, five-key ring, durable reinforced leather backpack." },
-      "Practical Survivalist":{ name: "Practical Survivalist Kit", contents: "Camping tent, 50ft hemp rope, 5 days of field rations, emergency medical bandages." }
-    };
-
-    const SKILL_LIST = [
-      { name: "Acrobatics",      stat: "DEX" }, { name: "Animal Handling", stat: "WIS" }, { name: "Arcana",        stat: "INT" },
-      { name: "Athletics",       stat: "STR" }, { name: "Deception",       stat: "CHA" }, { name: "History",       stat: "INT" },
-      { name: "Insight",         stat: "WIS" }, { name: "Intimidation",    stat: "CHA" }, { name: "Investigation",stat: "INT" },
-      { name: "Medicine",        stat: "WIS" }, { name: "Nature",          stat: "INT" }, { name: "Perception",    stat: "WIS" },
-      { name: "Performance",     stat: "CHA" }, { name: "Persuasion",      stat: "CHA" }, { name: "Religion",      stat: "INT" },
-      { name: "Sleight of Hand",stat: "DEX" }, { name: "Stealth",         stat: "DEX" }, { name: "Survival",      stat: "WIS" }
-    ];
-
-    const TOOLS_BY_CLASS = {
-      Bard:      { label: "Musical Instrument (Spellcasting Focus)", options: ["Lute", "Flute", "Viol", "Drum", "Horn", "Lyre", "Pan Flute", "Synth Keyboard"] },
-      Wizard:    { label: "Arcane Focus",    options: ["Crystal", "Orb", "Rod", "Wand", "Arcane Staff"] },
-      Sorcerer:  { label: "Arcane Focus",    options: ["Crystal", "Orb", "Rod", "Wand", "Arcane Staff"] },
-      Warlock:   { label: "Arcane Focus",    options: ["Crystal", "Orb", "Rod", "Wand", "Arcane Staff"] },
-      Druid:     { label: "Druidic Focus",   options: ["Sprig of Mistletoe", "Totem", "Wooden Staff", "Yew Wand"] },
-      Cleric:    { label: "Holy Symbol",     options: ["Amulet", "Emblem", "Shield Emblem", "Reliquary"] },
-      Paladin:   { label: "Holy Symbol",     options: ["Amulet", "Emblem", "Shield Emblem", "Reliquary"] },
-      Fighter:   { label: "Artisan's Tools", options: ["Smith's Tools", "Carpenter's Tools", "Mason's Tools", "Tinker's Tools"] },
-      Rogue:     { label: "Specialist Kit",  options: ["Thieves' Tools", "Disguise Kit", "Forgery Kit", "Poisoner's Kit"] },
-      Ranger:    { label: "Explorer's Kit",  options: ["Herbalism Kit", "Cartographer's Tools", "Navigator's Tools"] },
-      Monk:      { label: "Artisan's Tools", options: ["Calligrapher's Supplies", "Potter's Tools", "Weaver's Tools"] },
-      Barbarian: { label: "Artisan's Tools", options: ["Smith's Tools", "Brewer's Supplies", "Leatherworker's Tools"] }
-    };
-
-    const SPELLS_BY_RESONANCE = {
-      Destruction: [
-        { name: "Fire Bolt",       level: "Cantrip",   classes: ["Sorcerer","Wizard","Prismari"] },
-        { name: "Ray of Frost",    level: "Cantrip",   classes: ["Sorcerer","Wizard"] },
-        { name: "Vicious Mockery", level: "Cantrip",   classes: ["Bard","Silverquill"] },
-        { name: "Eldritch Blast",  level: "Cantrip",   classes: ["Warlock"] },
-        { name: "Sacred Flame",    level: "Cantrip",   classes: ["Cleric","Lorehold","Silverquill"] },
-        { name: "Magic Missile",   level: "1st-level", classes: ["Sorcerer","Wizard"] },
-        { name: "Burning Hands",   level: "1st-level", classes: ["Sorcerer","Wizard"] },
-        { name: "Chromatic Orb",   level: "1st-level", classes: ["Sorcerer","Wizard"] },
-        { name: "Guiding Bolt",    level: "1st-level", classes: ["Cleric"] },
-        { name: "Hellish Rebuke",  level: "1st-level", classes: ["Warlock"] }
-      ],
-      Control: [
-        { name: "Minor Illusion",  level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
-        { name: "Blade Ward",      level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
-        { name: "Thunderwave",     level: "1st-level", classes: ["Bard","Druid","Sorcerer","Wizard","Prismari"] },
-        { name: "Bane",            level: "1st-level", classes: ["Bard","Cleric","Warlock"] },
-        { name: "Hideous Laughter",level: "1st-level", classes: ["Bard","Wizard"] },
-        { name: "Faerie Fire",     level: "1st-level", classes: ["Bard","Druid"] },
-        { name: "Entangle",        level: "1st-level", classes: ["Druid","Quandrix"] },
-        { name: "Fog Cloud",       level: "1st-level", classes: ["Druid","Sorcerer","Wizard"] },
-        { name: "Charm Person",    level: "1st-level", classes: ["Bard","Druid","Sorcerer","Warlock","Wizard"] },
-        { name: "Color Spray",     level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] }
-      ],
-      Harmony: [
-        { name: "Guidance",        level: "Cantrip",   classes: ["Cleric","Druid","Quandrix","Witherbloom"] },
-        { name: "Resistance",      level: "Cantrip",   classes: ["Cleric","Druid"] },
-        { name: "Spare the Dying", level: "Cantrip",   classes: ["Cleric","Witherbloom"] },
-        { name: "Mending",         level: "Cantrip",   classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"] },
-        { name: "Cure Wounds",     level: "1st-level", classes: ["Bard","Cleric","Druid","Paladin","Ranger","Prismari","Witherbloom"] },
-        { name: "Healing Word",    level: "1st-level", classes: ["Bard","Cleric","Druid"] },
-        { name: "Bless",           level: "1st-level", classes: ["Cleric","Paladin"] },
-        { name: "Heroism",         level: "1st-level", classes: ["Bard","Paladin"] },
-        { name: "Shield",          level: "1st-level", classes: ["Sorcerer","Wizard","Prismari"] },
-        { name: "Detect Magic",    level: "1st-level", classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"] }
-      ]
-    };
-
-    const PERSONALITY_TRAITS = [
-      "I always have a witty remark ready, even in the most inappropriate situations.",
-      "I lose myself completely in whatever creative project I am currently working on.",
-      "I express my deepest emotions through performance rather than direct words."
-    ];
-
-    const IDEALS = [
-      "Creativity: Art is meant to push boundaries and challenge the established order. (Chaotic)",
-      "Community: Every ensemble member matters. We rise together or not at all. (Good)",
-      "Knowledge: Every experience is research material; even failure teaches. (Any)"
-    ];
-
-    const BONDS = [
-      "My performance troupe is my found family; I would sacrifice anything to protect them.",
-      "A particular faculty mentor saw potential in me when no one else did.",
-      "I came to Strixhaven to prove something essential to my family back home."
-    ];
-
-    const FLAWS_BY_STAT = {
-      STR: "I overcompensate for my physical weakness with loud bravado, often volunteering for feats I cannot complete.",
-      DEX: "My clumsiness regularly causes accidents and deeply embarrassing scenes at the absolute worst moments.",
-      CON: "I tire far more easily than my peers, which I desperately try to conceal with feigned disinterest.",
-      INT: "I struggle with complex theorems and frequently nod along in lecture while secretly, completely lost.",
-      WIS: "I am so absorbed in my own creative vision that I routinely miss obvious social cues and immediate dangers.",
-      CHA: "My social awkwardness causes me to come across as cold or aloof when I am simply and desperately nervous."
-    };
-
-    const NAME_BUCKETS = {
-      lineage: {
-        label: "🧬 Lineage / Heritage Names",
-        Owlin: ["Sylvara", "Morrith", "Talvyn", "Hoowyn", "Feathrix", "Vespa"],
-        Human: ["Calder", "Mira", "Theron", "Sable", "Evyn", "Rowan"],
-        default: ["Caelum", "Liriel", "Varis", "Sera", "Thorn", "Evren"]
-      },
-      college: {
-        label: "🎓 College / Aesthetic Names",
-        Prismari: ["Blazara", "Frostwick", "Stormsong", "Emberholt", "Galewing", "Cinder"],
-        Silverquill: ["Inkborne", "Quillstrike", "Shadevoice", "Pencraft", "Blottrix", "Crimsontongue"],
-        default: ["Stardust", "Prismway", "Wandermere", "Brightquill", "Lorewright", "Aethon"]
-      },
-      ironic: {
-        label: "😅 Ironic / Flaw-Contrast Names",
-        DEX: ["Grace", "Nimble", "Swift", "Fleetfoot", "Sure-Step", "Airy"],
-        STR: ["Atlas", "Boulder", "Ironside", "Grit", "Hefty", "Titan"],
-        default: ["Serendipity", "Fortuna", "Brilliance", "Ironwill", "Destiny", "Triumph"]
-      }
+      "Star Performer":      { name: "Star Performer Kit" },
+      "Stealthy Archivist":  { name: "Stealthy Archivist Kit" },
+      "Practical Survivalist":{ name: "Practical Survivalist Kit" }
     };
 
     function App() {
+      // --- AUTHENTICATION STATE ---
+      const [isAuthenticated, setIsAuthenticated] = useState(false);
+      const [loginMode, setLoginMode] = useState('new'); // 'new' or 'returning'
+      const [portalUsername, setPortalUsername] = useState('');
+      const [portalPassword, setPortalPassword] = useState('');
+      const [authError, setAuthError] = useState('');
+      const [isAuthLoading, setIsAuthLoading] = useState(false);
+
+      // --- APP STATE ---
       const [phase, setPhase] = useState(1);
       const [activeSheetTab, setActiveSheetTab] = useState(1);
       const [isSaving, setIsSaving] = useState(false);
-
       const [chatHistory, setChatHistory] = useState([]);
       const [chatInput, setChatInput] = useState('');
       const [isChatLoading, setIsChatLoading] = useState(false);
       const chatEndRef = useRef(null);
       const hasInitialized = useRef(false);
 
+      // --- CHARACTER STATE ---
       const [selectedLineage, setSelectedLineage] = useState("Human");
       const [selectedSize, setSelectedSize] = useState("Medium");
       const [selectedClass, setSelectedClass] = useState("Bard");
@@ -274,54 +154,51 @@
       const [selectedSpells, setSelectedSpells] = useState([]);
       const [selectedSkills, setSelectedSkills] = useState([]);
       const [alignment, setAlignment] = useState("Neutral Good");
-      const [selectedTrait, setSelectedTrait] = useState(PERSONALITY_TRAITS[0]);
-      const [selectedIdeal, setSelectedIdeal] = useState(IDEALS[0]);
-      const [selectedBond, setSelectedBond] = useState(BONDS[0]);
       const [flaw, setFlaw] = useState("");
       const [characterName, setCharacterName] = useState("");
-      const [playerName, setPlayerName] = useState("");
       const [backstory, setBackstory] = useState("");
-      const [customJobs] = useState({ employer: "Firejolt Cafe", coworker: "Tavern Keep" });
-      const [npcRelationships] = useState([{ name: "Rosie Wirthmore", points: 1, relationship: "Art Class Buddy" }]);
 
       const getScore  = (stat) => statAssignments[stat] ?? 10;
       const getMod    = (stat) => Math.floor((getScore(stat) - 10) / 2);
       const getModStr = (stat) => { const m = getMod(stat); return m >= 0 ? `+${m}` : `${m}`; };
-      const allAssigned = () => Object.values(statAssignments).every(v => v !== null);
-      const getAC  = () => ["Fighter","Barbarian","Paladin"].includes(selectedClass) ? 16 : 10 + getMod("DEX");
-      const getMaxHP = () => (CLASSES[selectedClass]?.hitDie || 8) + getMod("CON");
       const getSpellAbility = () => COLLEGES[selectedCollege]?.spellcastingAbility || "INT";
       const getSpellSaveDC = () => 8 + 2 + getMod(getSpellAbility());
-      const getSpellAtk    = () => { const m = getMod(getSpellAbility()); return m >= 0 ? `+${2 + m}` : `${2 + m}`; };
 
       const getGameDataForPhase = (phaseNum) => {
-        switch (phaseNum) {
-          case 1: return { lineages: LINEAGES };
-          case 2: return { classes: CLASSES };
-          case 3: return { colleges: COLLEGES };
-          case 4: return { clubs: CLUBS };
-          case 5: return { standardArray: STANDARD_ARRAY, statLabels: STAT_LABELS, currentClass: selectedClass, classPrimary: CLASSES[selectedClass]?.primary };
-          case 6: return { tools: TOOLS_BY_CLASS[selectedClass] || { label: "Tool / Kit", options: [] } };
-          case 7: return { stipendKits: STIPEND_KITS, weapons: CLASSES[selectedClass]?.weapons || [] };
-          case 8: return { spells: SPELLS_BY_RESONANCE, currentClass: selectedClass, currentCollege: selectedCollege };
-          case 9: return { skills: SKILL_LIST, currentClass: selectedClass };
-          case 10: return { alignments: ALIGNMENTS, flawsByStat: FLAWS_BY_STAT, lowestStat: getLowestStat() };
-          case 11: return { nameBuckets: NAME_BUCKETS, currentLineage: selectedLineage, currentCollege: selectedCollege };
-          default: return {};
-        }
+        return { 
+          lineages: LINEAGES, 
+          classes: CLASSES, 
+          colleges: COLLEGES, 
+          clubs: CLUBS, 
+          currentClass: selectedClass 
+        };
+      };
+
+      const loadStudentData = (data) => {
+        if (data.phase) setPhase(data.phase);
+        if (data.chatHistory) setChatHistory(data.chatHistory);
+        if (data.selectedLineage) setSelectedLineage(data.selectedLineage);
+        if (data.selectedSize) setSelectedSize(data.selectedSize);
+        if (data.selectedClass) setSelectedClass(data.selectedClass);
+        if (data.selectedCollege) setSelectedCollege(data.selectedCollege);
+        if (data.selectedClub) setSelectedClub(data.selectedClub);
+        if (data.statAssignments) setStatAssignments(data.statAssignments);
+        if (data.selectedTool) setSelectedTool(data.selectedTool);
+        if (data.selectedStipend) setSelectedStipend(data.selectedStipend);
+        if (data.selectedWeapon) setSelectedWeapon(data.selectedWeapon);
+        if (data.resonanceType) setResonanceType(data.resonanceType);
+        if (data.selectedSpells) setSelectedSpells(data.selectedSpells);
+        if (data.selectedSkills) setSelectedSkills(data.selectedSkills);
+        if (data.alignment) setAlignment(data.alignment);
+        if (data.flaw) setFlaw(data.flaw);
+        if (data.characterName) setCharacterName(data.characterName);
+        if (data.backstory) setBackstory(data.backstory);
       };
 
       const applySystemUpdates = (updates) => {
         if (!updates) return;
-        if (updates.nextPhaseNumber != null) {
-          const p = Math.max(1, Math.min(11, updates.nextPhaseNumber));
-          setPhase(p);
-        }
-        if (updates.selectedLineage != null) {
-          setSelectedLineage(updates.selectedLineage);
-          const lin = LINEAGES[updates.selectedLineage];
-          if (lin) setSelectedSize(updates.selectedSize || lin.sizeOptions[0]);
-        }
+        if (updates.nextPhaseNumber != null) setPhase(Math.max(1, Math.min(11, updates.nextPhaseNumber)));
+        if (updates.selectedLineage != null) setSelectedLineage(updates.selectedLineage);
         if (updates.selectedSize != null) setSelectedSize(updates.selectedSize);
         if (updates.selectedClass != null) setSelectedClass(updates.selectedClass);
         if (updates.selectedCollege != null) setSelectedCollege(updates.selectedCollege);
@@ -336,55 +213,83 @@
         if (updates.alignment != null) setAlignment(updates.alignment);
         if (updates.flaw != null) setFlaw(updates.flaw);
         if (updates.characterName != null) setCharacterName(updates.characterName);
-        if (updates.playerName != null) setPlayerName(updates.playerName);
         if (updates.backstory != null) setBackstory(updates.backstory);
-      };
-
-      const getLowestStat = () => {
-        let low = null; let lowVal = Infinity;
-        for (const [s, v] of Object.entries(statAssignments)) {
-          if (v !== null && v < lowVal) { lowVal = v; low = s; }
-        }
-        return low;
       };
 
       useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, [chatHistory, isChatLoading]);
 
+      // PORTAL LOGIN LOGIC
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        setAuthError('');
+        
+        const cleanUsername = portalUsername.trim().toLowerCase();
+        if (!cleanUsername || !portalPassword.trim()) {
+          setAuthError('Both Student ID and Password are required.');
+          return;
+        }
+
+        setIsAuthLoading(true);
+        try {
+          const docRef = window.firestoreDoc(window.firebaseDb, "student_enrollments", cleanUsername);
+          const docSnap = await window.firestoreGetDoc(docRef);
+
+          if (loginMode === 'returning') {
+            if (docSnap.exists() && docSnap.data().portalPassword === portalPassword) {
+              loadStudentData(docSnap.data());
+              setIsAuthenticated(true);
+            } else {
+              setAuthError('Invalid Student ID or Password.');
+            }
+          } else {
+            if (docSnap.exists()) {
+              setAuthError('This Student ID is already taken.');
+            } else {
+              setIsAuthenticated(true);
+            }
+          }
+        } catch (error) {
+          setAuthError('Failed to connect to Strixhaven servers.');
+        }
+        setIsAuthLoading(false);
+      };
+
+      // INIT CHAT (Only runs after successful login and if no history exists)
       useEffect(() => {
-        if (hasInitialized.current) return;
+        if (!isAuthenticated || hasInitialized.current || chatHistory.length > 0) return;
         hasInitialized.current = true;
         
         const initConversation = async () => {
           setIsChatLoading(true);
           const initPrompt = "Introduce yourself as the Proctor and ask the Phase 1 question.";
-          const gameData = getGameDataForPhase(1);
           try {
-            const response = await window.askAdmissionsAI([], initPrompt, gameData);
+            const response = await window.askAdmissionsAI([], initPrompt, getGameDataForPhase(1));
             const proctorMsg = response.proctorMessage || response.response || "Welcome to the Strixhaven Biblioplex.";
             setChatHistory([{ role: 'proctor', text: proctorMsg }]);
             if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
           } catch (err) {
-            console.error("Init error:", err);
-            setChatHistory([{ role: 'proctor', text: 'Welcome to the Strixhaven Biblioplex. I am your Admissions Proctor. Let us begin your entrance exam. How do you perceive your place in the multiverse? A) Through your own keen senses (Owlin) B) By observing the flow of magic (Elf/Gnome) C) Through connections with others (Human/Tiefling) D) By enduring hardship (Dwarf/Orc)' }]);
+            setChatHistory([{ role: 'proctor', text: 'Welcome. I am your Admissions Proctor. How do you perceive your place in the multiverse? A) Physical Pioneer B) Intellectual Observer C) Social Conduit D) Resilient Survivor' }]);
           }
           setIsChatLoading(false);
         };
         initConversation();
-      }, []);
+      }, [isAuthenticated]);
 
       const submitToFirebase = async () => {
-        if (!window.firebaseDb || !window.studentUid) { alert("Database disconnected."); return; }
+        if (!window.firebaseDb) { alert("Database disconnected."); return; }
         setIsSaving(true);
         try {
-          await window.firestoreSetDoc(window.firestoreDoc(window.firebaseDb, "student_enrollments", window.studentUid), {
-            characterName, playerName, selectedLineage, selectedSize, selectedCollege, selectedClass,
+          const cleanUsername = portalUsername.trim().toLowerCase();
+          await window.firestoreSetDoc(window.firestoreDoc(window.firebaseDb, "student_enrollments", cleanUsername), {
+            portalUsername: cleanUsername,
+            portalPassword: portalPassword,
+            phase, chatHistory, characterName, selectedLineage, selectedSize, selectedCollege, selectedClass,
             selectedClub, selectedStipend, selectedTool, selectedWeapon, alignment, statAssignments, selectedSkills, 
-            selectedSpells, resonanceType, selectedTrait, selectedIdeal, selectedBond, flaw, backstory,
-            customJobs, npcRelationships, lastUpdated: new Date().toISOString()
+            selectedSpells, resonanceType, flaw, backstory, lastUpdated: new Date().toISOString()
           }, { merge: true });
-          alert("Student File submitted to Strixhaven Cloud!");
+          alert("Student File successfully synced to the Strixhaven Cloud!");
         } catch (e) { console.error(e); alert("Failed to save. Check console."); }
         setIsSaving(false);
       };
@@ -440,10 +345,11 @@ Flaw: ${flaw}
         setChatHistory(newHistory);
         setIsChatLoading(true);
 
-        const gameData = getGameDataForPhase(phase);
+        // Auto-save progress in the background so players don't lose data if they refresh
+        submitToFirebase();
 
         try {
-          const response = await window.askAdmissionsAI(newHistory, userMsg, gameData);
+          const response = await window.askAdmissionsAI(newHistory, userMsg, getGameDataForPhase(phase));
           const proctorMsg = response.proctorMessage || response.response || 'The Proctor nods thoughtfully...';
           setChatHistory(prev => [...prev, { role: 'proctor', text: proctorMsg }]);
           if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
@@ -511,8 +417,7 @@ Flaw: ${flaw}
       );
 
       const renderSheet = () => {
-        const college = COLLEGES[selectedCollege] || {};
-        const cls     = CLASSES[selectedClass]    || {};
+        const cls = CLASSES[selectedClass] || {};
 
         switch (activeSheetTab) {
           case 1: return (
@@ -535,60 +440,99 @@ Flaw: ${flaw}
               </div>
             </div>
           );
-          case 2: return <div className="text-xs font-serif leading-relaxed">{backstory || "No backstory."}</div>;
+          case 2: return <div className="text-xs font-serif leading-relaxed">{backstory || "No backstory recorded yet."}</div>;
           case 3: return (
             <div className="space-y-3">
               <h3 className="text-sm font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1">Spellbook</h3>
-              {selectedSpells.map(s => <div key={s} className="bg-white/80 p-1.5 rounded border border-[#2c2214]/10 mb-1 text-xs font-semibold">{s}</div>)}
+              {selectedSpells.length > 0 ? selectedSpells.map(s => <div key={s} className="bg-white/80 p-1.5 rounded border border-[#2c2214]/10 mb-1 text-xs font-semibold">{s}</div>) : <p className="text-xs italic opacity-50">No spells learned yet.</p>}
             </div>
           );
           case 4: return (
             <div className="space-y-3 text-xs">
-              <p className="font-bold text-amber-950">{CLUBS[selectedClub]?.name || "No club"}</p>
-              <p className="text-slate-600">Stipend: {STIPEND_KITS[selectedStipend]?.name}</p>
+              <p className="font-bold text-amber-950">{CLUBS[selectedClub]?.name || "No club selected"}</p>
+              <p className="text-slate-600">Stipend: {STIPEND_KITS[selectedStipend]?.name || "None"}</p>
             </div>
           );
           default: return null;
         }
       };
 
+      // --- RENDER LOGIN PORTAL ---
+      if (!isAuthenticated) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] pointer-events-none"></div>
+            <div className="max-w-md w-full bg-slate-950 border border-amber-500/30 rounded-2xl p-8 shadow-2xl relative z-10">
+              <div className="text-center mb-8">
+                <i className="fa-solid fa-wand-magic-sparkles text-3xl text-amber-500 mb-3"></i>
+                <h1 className="text-2xl font-bold tracking-wider text-amber-400 font-serif">STRIXHAVEN</h1>
+                <p className="text-xs text-slate-400 tracking-widest uppercase mt-2">Student Portal Access</p>
+              </div>
+
+              <div className="flex gap-2 mb-6 bg-slate-900 p-1 rounded-lg">
+                <button onClick={() => {setLoginMode('new'); setAuthError('');}} className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${loginMode === 'new' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>New Enrollment</button>
+                <button onClick={() => {setLoginMode('returning'); setAuthError('');}} className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${loginMode === 'returning' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>Returning Student</button>
+              </div>
+
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">Student ID (Username)</label>
+                  <input type="text" value={portalUsername} onChange={e => setPortalUsername(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-100 focus:border-amber-500 outline-none" placeholder="e.g. RazorToe" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">Password</label>
+                  <input type="password" value={portalPassword} onChange={e => setPortalPassword(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-100 focus:border-amber-500 outline-none" placeholder="••••••••" />
+                </div>
+                
+                {authError && <div className="text-red-400 text-xs font-bold bg-red-950/50 p-3 rounded border border-red-900/50">{authError}</div>}
+                
+                <button type="submit" disabled={isAuthLoading} className="w-full py-3 mt-4 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-slate-950 rounded-lg text-sm font-bold shadow-lg transition-all">
+                  {isAuthLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : (loginMode === 'new' ? "Begin Entrance Exam" : "Resume Studies")}
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
+      // --- RENDER MAIN APP ---
       return (
-        <div className="flex flex-col lg:flex-row h-screen">
-          {/* LEFT: PROCTOR CHAT - Sole driver of the application */}
+        <div className="flex flex-col lg:flex-row h-screen relative">
+          {/* LEFT: PROCTOR CHAT */}
           <section className="w-full lg:w-1/2 border-r border-slate-800 flex flex-col bg-slate-900/40 overflow-hidden">
             <div className="px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
-              <header className="mb-4 border-b border-amber-500/30 pb-4">
-                <h1 className="text-xl font-bold tracking-wider text-amber-400 font-serif">
-                  <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN UNIVERSITY
-                </h1>
-                <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">
-                  Admissions Proctor - Phase {phase} of 11
-                </p>
-                <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
-                  <div className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full transition-all duration-500" style={{ width: `${(phase / 11) * 100}%` }}></div>
+              <header className="mb-4 border-b border-amber-500/30 pb-4 flex justify-between items-start">
+                <div>
+                  <h1 className="text-xl font-bold tracking-wider text-amber-400 font-serif">
+                    <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN
+                  </h1>
+                  <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">
+                    Proctor Exam - Phase {phase} of 11
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-500 uppercase block">Student ID</span>
+                  <span className="text-xs font-bold text-indigo-400">{portalUsername}</span>
                 </div>
               </header>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2 mb-4">
+                <div className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full transition-all duration-500" style={{ width: `${(phase / 11) * 100}%` }}></div>
+              </div>
             </div>
 
             <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-6 pb-4 pt-1">
-              <div className="text-[10px] text-indigo-400/60 uppercase tracking-wider pb-2 flex items-center gap-2 flex-shrink-0">
-                <i className="fa-solid fa-circle-dot fa-beat text-indigo-500/70 text-[8px]"></i>
-                Live Session - Phase {phase} active
-              </div>
               {renderChat()}
             </div>
 
-            {/* Submit & Download buttons on Phase 11 */}
-            {phase >= 11 && (
-              <div className="flex-shrink-0 px-4 md:px-6 py-4 border-t border-slate-800/80 flex justify-end gap-3">
-                <button onClick={downloadCharacterSheet} className="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
-                  <i className="fa-solid fa-file-arrow-down mr-2"></i>Download Sheet
-                </button>
-                <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
-                  <i className="fa-solid fa-cloud-arrow-up mr-2"></i>{isSaving ? "Syncing..." : "Submit Enrollment"}
-                </button>
-              </div>
-            )}
+            {/* Always show Sync & Download buttons when authenticated */}
+            <div className="flex-shrink-0 px-4 md:px-6 py-4 border-t border-slate-800/80 flex justify-end gap-3">
+              <button onClick={downloadCharacterSheet} className="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
+                <i className="fa-solid fa-file-arrow-down mr-2"></i>Download
+              </button>
+              <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
+                <i className="fa-solid fa-cloud-arrow-up mr-2"></i>{isSaving ? "Syncing..." : "Force Sync"}
+              </button>
+            </div>
           </section>
 
           {/* RIGHT: CHARACTER SHEET */}
@@ -604,6 +548,12 @@ Flaw: ${flaw}
               {renderSheet()}
             </div>
           </section>
+
+          {/* APP VERSION TRACKER */}
+          <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
+            v1.2.0 - Student Portal Update
+          </div>
+
         </div>
       );
     }
