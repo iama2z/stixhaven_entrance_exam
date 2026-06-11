@@ -66,7 +66,525 @@
     initializeSession();
   </script>
 
-  <script type="text/babel">
+  <script type="text/babel">const { useState, useEffect, useRef } = React;
+
+    const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
+    const STAT_LABELS = { STR: "Strength", DEX: "Dexterity", CON: "Constitution", INT: "Intelligence", WIS: "Wisdom", CHA: "Charisma" };
+
+    const COLLEGES = {
+      Prismari:    { name: "Prismari",    spellcastingAbility: "CHA" },
+      Silverquill: { name: "Silverquill", spellcastingAbility: "CHA" },
+      Quandrix:    { name: "Quandrix",    spellcastingAbility: "INT" },
+      Witherbloom: { name: "Witherbloom", spellcastingAbility: "WIS" },
+      Lorehold:    { name: "Lorehold",    spellcastingAbility: "INT" }
+    };
+
+    const LINEAGES = {
+      Owlin:    { name: "Owlin",    sizeOptions: ["Small", "Medium"], speed: 30 },
+      Human:    { name: "Human",    sizeOptions: ["Medium"],          speed: 30 },
+      Elf:      { name: "Elf",      sizeOptions: ["Medium"],          speed: 30 },
+      Dwarf:    { name: "Dwarf",    sizeOptions: ["Medium"],          speed: 25 },
+      Tiefling: { name: "Tiefling", sizeOptions: ["Small", "Medium"], speed: 30 },
+      Gnome:    { name: "Gnome",    sizeOptions: ["Small"],           speed: 30 },
+      Halfling: { name: "Halfling", sizeOptions: ["Small"],           speed: 30 },
+      Aasimar:  { name: "Aasimar",  sizeOptions: ["Small", "Medium"], speed: 30 },
+      Orc:      { name: "Orc",      sizeOptions: ["Medium"],          speed: 30 }
+    };
+
+    const CLASSES = {
+      Bard:      { name: "Bard",      hitDie: 8,  primary: "CHA" },
+      Cleric:    { name: "Cleric",    hitDie: 8,  primary: "WIS" },
+      Druid:     { name: "Druid",     hitDie: 8,  primary: "WIS" },
+      Fighter:   { name: "Fighter",   hitDie: 10, primary: "STR" },
+      Monk:      { name: "Monk",      hitDie: 8,  primary: "DEX" },
+      Paladin:   { name: "Paladin",   hitDie: 10, primary: "STR" },
+      Ranger:    { name: "Ranger",    hitDie: 10, primary: "DEX" },
+      Rogue:     { name: "Rogue",     hitDie: 8,  primary: "DEX" },
+      Sorcerer:  { name: "Sorcerer",  hitDie: 6,  primary: "CHA" },
+      Warlock:   { name: "Warlock",   hitDie: 8,  primary: "CHA" },
+      Wizard:    { name: "Wizard",    hitDie: 6,  primary: "INT" },
+      Barbarian: { name: "Barbarian", hitDie: 12, primary: "STR" }
+    };
+
+    const CLUBS = {
+      "Fine Artists":       { name: "Distinguished Society of Fine Artists" },
+      "LARP Guild":         { name: "LARP Guild" },
+      "Strixhaven Star":    { name: "Strixhaven Star Newspaper" },
+      "Drama Society":      { name: "Campus Drama Society" },
+      "Silkball Club":      { name: "Intramural Silkball Club" }
+    };
+
+    const STIPEND_KITS = {
+      "Star Performer":      { name: "Star Performer Kit" },
+      "Stealthy Archivist":  { name: "Stealthy Archivist Kit" },
+      "Practical Survivalist":{ name: "Practical Survivalist Kit" }
+    };
+
+    function App() {
+      // --- AUTHENTICATION STATE ---
+      const [isAuthenticated, setIsAuthenticated] = useState(false);
+      const [loginMode, setLoginMode] = useState('new');
+      const [portalUsername, setPortalUsername] = useState('');
+      const [portalPassword, setPortalPassword] = useState('');
+      const [authError, setAuthError] = useState('');
+      const [isAuthLoading, setIsAuthLoading] = useState(false);
+
+      // --- APP STATE ---
+      const [phase, setPhase] = useState(1);
+      const [activeSheetTab, setActiveSheetTab] = useState(1);
+      const [isSaving, setIsSaving] = useState(false);
+      const [chatHistory, setChatHistory] = useState([]);
+      const [chatInput, setChatInput] = useState('');
+      const [isChatLoading, setIsChatLoading] = useState(false);
+      const chatEndRef = useRef(null);
+      const hasInitialized = useRef(false);
+
+      // --- CHARACTER STATE ---
+      const [selectedLineage, setSelectedLineage] = useState("Human");
+      const [selectedSize, setSelectedSize] = useState("Medium");
+      const [selectedClass, setSelectedClass] = useState("Bard");
+      const [selectedCollege, setSelectedCollege] = useState("Prismari");
+      const [selectedClub, setSelectedClub] = useState("Fine Artists");
+      const [statAssignments, setStatAssignments] = useState({ STR: null, DEX: null, CON: null, INT: null, WIS: null, CHA: null });
+      const [selectedTool, setSelectedTool] = useState("");
+      const [selectedStipend, setSelectedStipend] = useState("Star Performer");
+      const [selectedWeapon, setSelectedWeapon] = useState("");
+      const [selectedArmor, setSelectedArmor] = useState("Unarmored");
+      const [selectedLanguage, setSelectedLanguage] = useState("Common");
+      const [resonanceType, setResonanceType] = useState(null);
+      const [selectedSpells, setSelectedSpells] = useState([]);
+      const [selectedSkills, setSelectedSkills] = useState([]);
+      const [alignment, setAlignment] = useState("Neutral Good");
+      const [flaw, setFlaw] = useState("");
+      const [characterName, setCharacterName] = useState("");
+      const [backstory, setBackstory] = useState("");
+
+      // --- MATH HELPERS ---
+      const getScore  = (stat) => statAssignments[stat] ?? 10;
+      const getMod    = (stat) => Math.floor((getScore(stat) - 10) / 2);
+      const getModStr = (stat) => { const m = getMod(stat); return m >= 0 ? `+${m}` : `${m}`; };
+      const getMaxHP = () => (CLASSES[selectedClass]?.hitDie || 8) + getMod("CON");
+      const getSpellAbility = () => COLLEGES[selectedCollege]?.spellcastingAbility || "INT";
+      const getSpellSaveDC = () => 8 + 2 + getMod(getSpellAbility());
+      
+      const getAC = () => {
+        const dexMod = getMod("DEX");
+        if (selectedArmor === "Heavy Armor") return 16; // Chain Mail baseline
+        if (selectedArmor === "Medium Armor") return 13 + Math.min(2, dexMod); // Scale/Hide + Dex (Max 2)
+        if (selectedArmor === "Light Armor") return 11 + dexMod; // Leather + Dex
+        return 10 + dexMod; // Unarmored
+      };
+
+      const getGameDataForPhase = (phaseNum) => {
+        return { lineages: LINEAGES, classes: CLASSES, colleges: COLLEGES, clubs: CLUBS, currentClass: selectedClass };
+      };
+
+      const loadStudentData = (data) => {
+        if (data.phase) setPhase(data.phase);
+        if (data.chatHistory) setChatHistory(data.chatHistory);
+        if (data.selectedLineage) setSelectedLineage(data.selectedLineage);
+        if (data.selectedSize) setSelectedSize(data.selectedSize);
+        if (data.selectedClass) setSelectedClass(data.selectedClass);
+        if (data.selectedCollege) setSelectedCollege(data.selectedCollege);
+        if (data.selectedClub) setSelectedClub(data.selectedClub);
+        if (data.statAssignments) setStatAssignments(data.statAssignments);
+        if (data.selectedTool) setSelectedTool(data.selectedTool);
+        if (data.selectedStipend) setSelectedStipend(data.selectedStipend);
+        if (data.selectedWeapon) setSelectedWeapon(data.selectedWeapon);
+        if (data.selectedArmor) setSelectedArmor(data.selectedArmor);
+        if (data.selectedLanguage) setSelectedLanguage(data.selectedLanguage);
+        if (data.resonanceType) setResonanceType(data.resonanceType);
+        if (data.selectedSpells) setSelectedSpells(data.selectedSpells);
+        if (data.selectedSkills) setSelectedSkills(data.selectedSkills);
+        if (data.alignment) setAlignment(data.alignment);
+        if (data.flaw) setFlaw(data.flaw);
+        if (data.characterName) setCharacterName(data.characterName);
+        if (data.backstory) setBackstory(data.backstory);
+      };
+
+      const applySystemUpdates = (updates) => {
+        if (!updates) return;
+        if (updates.nextPhaseNumber != null) setPhase(Math.max(1, Math.min(11, updates.nextPhaseNumber)));
+        if (updates.selectedLineage != null) setSelectedLineage(updates.selectedLineage);
+        if (updates.selectedSize != null) setSelectedSize(updates.selectedSize);
+        if (updates.selectedClass != null) setSelectedClass(updates.selectedClass);
+        if (updates.selectedCollege != null) setSelectedCollege(updates.selectedCollege);
+        if (updates.selectedClub != null) setSelectedClub(updates.selectedClub);
+        if (updates.statAssignments != null) setStatAssignments(prev => ({ ...prev, ...updates.statAssignments }));
+        if (updates.selectedTool != null) setSelectedTool(updates.selectedTool);
+        if (updates.selectedStipend != null) setSelectedStipend(updates.selectedStipend);
+        if (updates.selectedWeapon != null) setSelectedWeapon(updates.selectedWeapon);
+        if (updates.selectedArmor != null) setSelectedArmor(updates.selectedArmor);
+        if (updates.selectedLanguage != null) setSelectedLanguage(updates.selectedLanguage);
+        if (updates.resonanceType != null) setResonanceType(updates.resonanceType);
+        if (updates.selectedSpells != null) setSelectedSpells(updates.selectedSpells);
+        if (updates.selectedSkills != null) setSelectedSkills(updates.selectedSkills);
+        if (updates.alignment != null) setAlignment(updates.alignment);
+        if (updates.flaw != null) setFlaw(updates.flaw);
+        if (updates.characterName != null) setCharacterName(updates.characterName);
+        if (updates.backstory != null) setBackstory(updates.backstory);
+      };
+
+      useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [chatHistory, isChatLoading]);
+
+      // PORTAL LOGIN LOGIC
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        setAuthError('');
+        
+        const cleanUsername = portalUsername.trim().toLowerCase();
+        if (!cleanUsername || !portalPassword.trim()) {
+          setAuthError('Both Student ID and Password are required.');
+          return;
+        }
+
+        setIsAuthLoading(true);
+        try {
+          const docRef = window.firestoreDoc(window.firebaseDb, "student_enrollments", cleanUsername);
+          const docSnap = await window.firestoreGetDoc(docRef);
+
+          if (loginMode === 'returning') {
+            if (docSnap.exists() && docSnap.data().portalPassword === portalPassword) {
+              loadStudentData(docSnap.data());
+              setIsAuthenticated(true);
+            } else {
+              setAuthError('Invalid Student ID or Password.');
+            }
+          } else {
+            if (docSnap.exists()) {
+              setAuthError('This Student ID is already taken.');
+            } else {
+              setIsAuthenticated(true);
+            }
+          }
+        } catch (error) {
+          setAuthError('Failed to connect to Strixhaven servers.');
+        }
+        setIsAuthLoading(false);
+      };
+
+      useEffect(() => {
+        if (!isAuthenticated || hasInitialized.current || chatHistory.length > 0) return;
+        hasInitialized.current = true;
+        
+        const initConversation = async () => {
+          setIsChatLoading(true);
+          const initPrompt = "Introduce yourself as the Proctor and ask the Phase 1 question.";
+          try {
+            const response = await window.askAdmissionsAI([], initPrompt, getGameDataForPhase(1));
+            const proctorMsg = response.proctorMessage || response.response || "Welcome to the Strixhaven Biblioplex.";
+            setChatHistory([{ role: 'proctor', text: proctorMsg }]);
+            if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
+          } catch (err) {
+            setChatHistory([{ role: 'proctor', text: 'Welcome. I am your Admissions Proctor. How do you perceive your place in the multiverse? A) Physical Pioneer B) Intellectual Observer C) Social Conduit D) Resilient Survivor' }]);
+          }
+          setIsChatLoading(false);
+        };
+        initConversation();
+      }, [isAuthenticated]);
+
+      // SILENT AUTO-SAVE TOGGLE ADDED HERE
+      const submitToFirebase = async (silent = false) => {
+        if (!window.firebaseDb) { 
+          if (!silent) alert("Database disconnected."); 
+          return; 
+        }
+        setIsSaving(true);
+        try {
+          const cleanUsername = portalUsername.trim().toLowerCase();
+          await window.firestoreSetDoc(window.firestoreDoc(window.firebaseDb, "student_enrollments", cleanUsername), {
+            portalUsername: cleanUsername,
+            portalPassword: portalPassword,
+            phase, chatHistory, characterName, selectedLineage, selectedSize, selectedCollege, selectedClass,
+            selectedClub, selectedStipend, selectedTool, selectedWeapon, selectedArmor, selectedLanguage, alignment, statAssignments, selectedSkills, 
+            selectedSpells, resonanceType, flaw, backstory, lastUpdated: new Date().toISOString()
+          }, { merge: true });
+          
+          if (!silent) alert("Student File successfully synced to the Strixhaven Cloud!");
+        } catch (e) { 
+          console.error(e); 
+          if (!silent) alert("Failed to save. Check console."); 
+        }
+        setIsSaving(false);
+      };
+      
+      const downloadCharacterSheet = () => {
+        const content = `
+=========================================
+STRIXHAVEN UNIVERSITY - OFFICIAL TRANSCRIPT
+=========================================
+Student Name: ${characterName || "Unnamed Student"}
+Lineage: ${selectedLineage} (${selectedSize})
+Class: ${selectedClass}
+College: ${selectedCollege}
+Alignment: ${alignment}
+Background: Strixhaven Student
+
+--- DERIVED COMBAT STATS ---
+Armor Class (AC): ${getAC()} (${selectedArmor})
+Hit Points (HP): ${getMaxHP()} / ${getMaxHP()}
+Hit Dice: 1d${CLASSES[selectedClass]?.hitDie || 8}
+Initiative: ${getModStr('DEX')}
+Speed: ${LINEAGES[selectedLineage]?.speed || 30} ft.
+Proficiency Bonus: +2
+Inspiration: 0
+
+--- CORE ATTRIBUTES ---
+STR: ${getScore('STR')} (${getModStr('STR')})
+DEX: ${getScore('DEX')} (${getModStr('DEX')})
+CON: ${getScore('CON')} (${getModStr('CON')})
+INT: ${getScore('INT')} (${getModStr('INT')})
+WIS: ${getScore('WIS')} (${getModStr('WIS')})
+CHA: ${getScore('CHA')} (${getModStr('CHA')})
+
+--- ACADEMICS & EXTRACURRICULARS ---
+Club: ${CLUBS[selectedClub]?.name || "None"}
+Skills: ${selectedSkills.join(", ")}
+Languages: Common, ${selectedLanguage}
+Tool Focus: ${selectedTool}
+Equipment: ${selectedWeapon}, ${STIPEND_KITS[selectedStipend]?.name}
+
+--- MAGIC & SPELLS ---
+Spellcasting Ability: ${getSpellAbility()}
+Spell Save DC: ${getSpellSaveDC()}
+Known Spells: ${selectedSpells.join(", ")}
+
+--- PERSONALITY PROFILE ---
+Flaw: ${flaw}
+`;
+        const blob = new Blob([content.trim()], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${(characterName || "Strixhaven_Student").replace(/\s+/g, '_')}_Sheet.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
+      const handleChatSubmit = async () => {
+        if (!chatInput.trim() || isChatLoading) return;
+        const userMsg = chatInput.trim();
+        setChatInput('');
+        const newHistory = [...chatHistory, { role: 'user', text: userMsg }];
+        setChatHistory(newHistory);
+        setIsChatLoading(true);
+
+        // This runs silently in the background now, NO POPUP!
+        submitToFirebase(true);
+
+        try {
+          const response = await window.askAdmissionsAI(newHistory, userMsg, getGameDataForPhase(phase));
+          const proctorMsg = response.proctorMessage || response.response || 'The Proctor nods thoughtfully...';
+          setChatHistory(prev => [...prev, { role: 'proctor', text: proctorMsg }]);
+          if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
+        } catch {
+          setChatHistory(prev => [...prev, { role: 'proctor', text: 'The Biblioplex archives are currently unreachable. Please try again later.' }]);
+        }
+        setIsChatLoading(false);
+      };
+
+      const renderChat = () => (
+        <>
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            {chatHistory.map((msg, i) => (
+              <div key={i} className={`flex items-start ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {msg.role === 'proctor' && (
+                  <div className="w-6 h-6 rounded-full bg-indigo-900 border border-indigo-500/40 flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
+                    <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
+                  </div>
+                )}
+                <div className={`max-w-[80%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
+                  msg.role === 'user'
+                    ? 'bg-amber-500/20 border border-amber-500/30 text-amber-100 rounded-tr-sm'
+                    : 'bg-indigo-950/60 border border-indigo-500/20 text-indigo-100 rounded-tl-sm'
+                }`}>
+                  {msg.role === 'proctor' && <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Proctor</span>}
+                  {msg.text}
+                </div>
+                {msg.role === 'user' && (
+                  <div className="w-6 h-6 rounded-full bg-amber-900 border border-amber-500/40 flex items-center justify-center ml-2 flex-shrink-0 mt-0.5">
+                    <i className="fa-solid fa-user-graduate text-amber-400 text-[8px]"></i>
+                  </div>
+                )}
+              </div>
+            ))}
+            {isChatLoading && (
+              <div className="flex items-start">
+                <div className="w-6 h-6 rounded-full bg-indigo-900 border border-indigo-500/40 flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
+                  <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
+                </div>
+                <div className="bg-indigo-950/60 border border-indigo-500/20 px-3 py-2 rounded-xl rounded-tl-sm text-xs text-indigo-300 italic">
+                  <i className="fa-solid fa-ellipsis fa-fade mr-1 text-indigo-400"></i>Proctor is writing...
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+          <div className="flex gap-2 mt-3 pt-3 border-t border-indigo-900/40 flex-shrink-0">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
+              placeholder="Speak to the Admissions Proctor..."
+              className="flex-1 bg-slate-950 border border-indigo-900/50 rounded-lg px-3 py-2 text-xs text-indigo-100 focus:border-indigo-500 outline-none placeholder:text-indigo-800"
+            />
+            <button
+              onClick={handleChatSubmit}
+              disabled={isChatLoading || !chatInput.trim()}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow transition-all whitespace-nowrap"
+            >
+              {isChatLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-paper-plane mr-1"></i>Send</>}
+            </button>
+          </div>
+        </>
+      );
+
+      const renderSheet = () => {
+        const cls = CLASSES[selectedClass] || {};
+
+        switch (activeSheetTab) {
+          case 1: return (
+            <div className="space-y-4">
+              <div className="border-b-2 border-[#2c2214] pb-3">
+                <h2 className="text-lg font-bold font-serif">{characterName || "Unnamed Student"}</h2>
+                <p className="text-xs text-[#66543b] mt-0.5">{cls.name || "-"} 1 • {selectedCollege} • {selectedLineage} • {alignment}</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {["STR","DEX","CON","INT","WIS","CHA"].map(stat => {
+                  const score = statAssignments[stat];
+                  const mod = score !== null ? Math.floor((score - 10) / 2) : null;
+                  return (
+                    <div key={stat} className="border-2 rounded-xl p-2 bg-[#f9f5eb] text-center shadow-sm border-[#2c2214]">
+                      <span className="text-[8px] font-bold text-slate-500 uppercase">{stat}</span>
+                      <span className="text-sm font-extrabold block text-amber-900">{mod !== null ? (mod >= 0 ? `+${mod}` : mod) : "-"}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+          case 2: return <div className="text-xs font-serif leading-relaxed">{backstory || "No backstory recorded yet."}</div>;
+          case 3: return (
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1">Spellbook</h3>
+              {selectedSpells.length > 0 ? selectedSpells.map(s => <div key={s} className="bg-white/80 p-1.5 rounded border border-[#2c2214]/10 mb-1 text-xs font-semibold">{s}</div>) : <p className="text-xs italic opacity-50">No spells learned yet.</p>}
+            </div>
+          );
+          case 4: return (
+            <div className="space-y-3 text-xs">
+              <p className="font-bold text-amber-950">{CLUBS[selectedClub]?.name || "No club selected"}</p>
+              <p className="text-slate-600">Stipend: {STIPEND_KITS[selectedStipend]?.name || "None"}</p>
+            </div>
+          );
+          default: return null;
+        }
+      };
+
+      // --- RENDER LOGIN PORTAL ---
+      if (!isAuthenticated) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] pointer-events-none"></div>
+            <div className="max-w-md w-full bg-slate-950 border border-amber-500/30 rounded-2xl p-8 shadow-2xl relative z-10">
+              <div className="text-center mb-8">
+                <i className="fa-solid fa-wand-magic-sparkles text-3xl text-amber-500 mb-3"></i>
+                <h1 className="text-2xl font-bold tracking-wider text-amber-400 font-serif">STRIXHAVEN</h1>
+                <p className="text-xs text-slate-400 tracking-widest uppercase mt-2">Student Portal Access</p>
+              </div>
+
+              <div className="flex gap-2 mb-6 bg-slate-900 p-1 rounded-lg">
+                <button onClick={() => {setLoginMode('new'); setAuthError('');}} className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${loginMode === 'new' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>New Enrollment</button>
+                <button onClick={() => {setLoginMode('returning'); setAuthError('');}} className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${loginMode === 'returning' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}>Returning Student</button>
+              </div>
+
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">Student ID (Username)</label>
+                  <input type="text" value={portalUsername} onChange={e => setPortalUsername(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-100 focus:border-amber-500 outline-none" placeholder="e.g. RazorToe" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 mb-1">Password</label>
+                  <input type="password" value={portalPassword} onChange={e => setPortalPassword(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 text-sm text-slate-100 focus:border-amber-500 outline-none" placeholder="••••••••" />
+                </div>
+                
+                {authError && <div className="text-red-400 text-xs font-bold bg-red-950/50 p-3 rounded border border-red-900/50">{authError}</div>}
+                
+                <button type="submit" disabled={isAuthLoading} className="w-full py-3 mt-4 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-slate-950 rounded-lg text-sm font-bold shadow-lg transition-all">
+                  {isAuthLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : (loginMode === 'new' ? "Begin Entrance Exam" : "Resume Studies")}
+                </button>
+              </form>
+            </div>
+          </div>
+        );
+      }
+
+      // --- RENDER MAIN APP ---
+      return (
+        <div className="flex flex-col lg:flex-row h-screen relative">
+          {/* LEFT: PROCTOR CHAT */}
+          <section className="w-full lg:w-1/2 border-r border-slate-800 flex flex-col bg-slate-900/40 overflow-hidden">
+            <div className="px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
+              <header className="mb-4 border-b border-amber-500/30 pb-4 flex justify-between items-start">
+                <div>
+                  <h1 className="text-xl font-bold tracking-wider text-amber-400 font-serif">
+                    <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN
+                  </h1>
+                  <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">
+                    Proctor Exam - Phase {phase} of 11
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-500 uppercase block">Student ID</span>
+                  <span className="text-xs font-bold text-indigo-400">{portalUsername}</span>
+                </div>
+              </header>
+              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2 mb-4">
+                <div className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full transition-all duration-500" style={{ width: `${(phase / 11) * 100}%` }}></div>
+              </div>
+            </div>
+
+            <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-6 pb-4 pt-1">
+              {renderChat()}
+            </div>
+
+            <div className="flex-shrink-0 px-4 md:px-6 py-4 border-t border-slate-800/80 flex justify-end gap-3">
+              <button onClick={downloadCharacterSheet} className="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
+                <i className="fa-solid fa-file-arrow-down mr-2"></i>Download
+              </button>
+              <button onClick={() => submitToFirebase(false)} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
+                <i className="fa-solid fa-cloud-arrow-up mr-2"></i>{isSaving ? "Syncing..." : "Force Sync"}
+              </button>
+            </div>
+          </section>
+
+          {/* RIGHT: CHARACTER SHEET */}
+          <section className="w-full lg:w-1/2 p-4 md:p-6 bg-slate-800/30 flex flex-col gap-3 overflow-y-auto">
+            <div className="flex gap-2 border-b border-slate-800 pb-3">
+              {[{ id: 1, label: "Core Stats" }, { id: 2, label: "Backstory" }, { id: 3, label: "Spellbook" }, { id: 4, label: "Campus" }].map(tab => (
+                <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-800 hover:border-amber-500/40"}`}>
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            <div className="flex-1 bg-[#fdfaf2] text-[#2c2214] p-5 rounded-2xl border-4 border-[#ded1ba] overflow-y-auto shadow-inner">
+              {renderSheet()}
+            </div>
+          </section>
+
+          {/* APP VERSION TRACKER */}
+          <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
+            v1.3.0 - Combat Stats Update
+          </div>
+
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     const { useState, useEffect, useRef } = React;
 
     const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
