@@ -19,7 +19,6 @@
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
     import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    // NEW: Import Functions
     import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
 
     const firebaseConfig = {
@@ -36,14 +35,13 @@
     const analytics = getAnalytics(app);
     const db = getFirestore(app);
     const auth = getAuth(app);
-    const functions = getFunctions(app); // NEW: Initialize Functions
+    const functions = getFunctions(app);
 
     window.firebaseDb = db;
     window.firebaseAuth = auth;
     window.firestoreDoc = doc;
     window.firestoreSetDoc = setDoc;
 
-    // AI helper: sends chatHistory, latest message, and game data to the Cloud Function
     const askStrixhavenConsultant = httpsCallable(functions, 'strixhavenConsultant');
     window.askAdmissionsAI = async (chatHistory, latestMessage, gameData) => {
         const result = await askStrixhavenConsultant({ 
@@ -77,7 +75,6 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // ─── GAME DATA ───────────────────────────────────────────────────────────────
     const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
     const STAT_LABELS = { STR: "Strength", DEX: "Dexterity", CON: "Constitution", INT: "Intelligence", WIS: "Wisdom", CHA: "Charisma" };
 
@@ -90,50 +87,50 @@
     };
 
     const LINEAGES = {
-      Owlin:    { name: "Owlin",    sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 120, traits: ["Flight: Flying speed equal to walking speed.", "Silent Feathers: Proficiency in Stealth."], proctorHint: "Excellent for scouting. Flight gives you the high ground over campus rooftops — stay out of melee range." },
-      Human:    { name: "Human",    sizeOptions: ["Medium"],          speed: 30, darkvision: 0,   traits: ["Resourceful: Gain Heroic Inspiration after a Long Rest.", "Versatile: Gain one Origin Feat at character creation."], proctorHint: "The ultimate wildcard. An Origin Feat at Level 1 lets you specialize immediately — a powerful academic head start." },
-      Elf:      { name: "Elf",      sizeOptions: ["Medium"],          speed: 30, darkvision: 60,  traits: ["Fey Ancestry: Advantage on saves vs. Charmed; magic cannot put you to sleep.", "Trance: 4 hours of meditation counts as a Long Rest.", "Keen Senses: Proficiency in Perception."], proctorHint: "The supreme Controller. High Elf lineage lets you swap a cantrip daily — an unmatched tactical advantage." },
-      Dwarf:    { name: "Dwarf",    sizeOptions: ["Medium"],          speed: 25, darkvision: 60,  traits: ["Dwarven Resilience: Advantage on Poison saves; Poison resistance.", "Stonecunning: Double Proficiency Bonus on History checks about stonework."], proctorHint: "Premier frontliner. Hill Dwarf lineage grants +1 max HP per level — a compound advantage that scales across all four years." },
-      Tiefling: { name: "Tiefling", sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Hellish Resistance: Resistance to Fire damage.", "Otherworldly Gaze: Thaumaturgy cantrip + Hellish Rebuke + Darkness spells."], proctorHint: "Natural Blaster. Casting Darkness creates consistent battlefield control that even blocks magical vision." },
-      Gnome:    { name: "Gnome",    sizeOptions: ["Small"],           speed: 30, darkvision: 60,  traits: ["Gnome Cunning: Advantage on all INT, WIS, and CHA saving throws against magic."], proctorHint: "Tailored for arcane study. Gnome Cunning provides unmatched resilience against rival spellcasters in exam duels." },
-      Halfling: { name: "Halfling", sizeOptions: ["Small"],           speed: 30, darkvision: 0,   traits: ["Lucky: Reroll a natural 1 on any d20 roll.", "Brave: Advantage on saves vs. being Frightened.", "Halfling Nimbleness: Move through the space of larger creatures."], proctorHint: "Perfect Support companion. The Lucky trait dramatically reduces the statistical risk of critical failure at the worst moments." },
-      Aasimar:  { name: "Aasimar",  sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Celestial Resistance: Resistance to Necrotic and Radiant damage.", "Healing Hands: Restore HP equal to d4s × Proficiency Bonus as an action.", "Celestial Revelation at 3rd level: choose Heavenly Wings, Inner Radiance, or Necrotic Shroud."], proctorHint: "Ideal Support/Blaster hybrid. Heavenly Wings at 3rd level grants flight — exceptional for repositioning mid-battle." },
-      Orc:      { name: "Orc",      sizeOptions: ["Medium"],          speed: 30, darkvision: 120, traits: ["Adrenaline Rush: Bonus action Dash + Temporary HP equal to Proficiency Bonus.", "Powerful Build: Count as one size larger for carrying capacity.", "Relentless Endurance: Drop to 1 HP instead of 0 HP, once per Long Rest."], proctorHint: "Outstanding Support tank. Adrenaline Rush lets you sprint to a downed ally in seconds — a life-saving campus tactic." }
+      Owlin:    { name: "Owlin",    sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 120, traits: ["Flight: Flying speed equal to walking speed.", "Silent Feathers: Proficiency in Stealth."] },
+      Human:    { name: "Human",    sizeOptions: ["Medium"],          speed: 30, darkvision: 0,   traits: ["Resourceful: Gain Heroic Inspiration after a Long Rest.", "Versatile: Gain one Origin Feat at character creation."] },
+      Elf:      { name: "Elf",      sizeOptions: ["Medium"],          speed: 30, darkvision: 60,  traits: ["Fey Ancestry: Advantage on saves vs. Charmed; magic cannot put you to sleep.", "Trance: 4 hours of meditation counts as a Long Rest.", "Keen Senses: Proficiency in Perception."] },
+      Dwarf:    { name: "Dwarf",    sizeOptions: ["Medium"],          speed: 25, darkvision: 60,  traits: ["Dwarven Resilience: Advantage on Poison saves; Poison resistance.", "Stonecunning: Double Proficiency Bonus on History checks about stonework."] },
+      Tiefling: { name: "Tiefling", sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Hellish Resistance: Resistance to Fire damage.", "Otherworldly Gaze: Thaumaturgy cantrip + Hellish Rebuke + Darkness spells."] },
+      Gnome:    { name: "Gnome",    sizeOptions: ["Small"],           speed: 30, darkvision: 60,  traits: ["Gnome Cunning: Advantage on all INT, WIS, and CHA saving throws against magic."] },
+      Halfling: { name: "Halfling", sizeOptions: ["Small"],           speed: 30, darkvision: 0,   traits: ["Lucky: Reroll a natural 1 on any d20 roll.", "Brave: Advantage on saves vs. being Frightened.", "Halfling Nimbleness: Move through the space of larger creatures."] },
+      Aasimar:  { name: "Aasimar",  sizeOptions: ["Small", "Medium"], speed: 30, darkvision: 60,  traits: ["Celestial Resistance: Resistance to Necrotic and Radiant damage.", "Healing Hands: Restore HP equal to d4s × Proficiency Bonus as an action.", "Celestial Revelation at 3rd level."] },
+      Orc:      { name: "Orc",      sizeOptions: ["Medium"],          speed: 30, darkvision: 120, traits: ["Adrenaline Rush: Bonus action Dash + Temporary HP.", "Powerful Build: Count as one size larger for carrying capacity.", "Relentless Endurance: Drop to 1 HP instead of 0 HP, once per Long Rest."] }
     };
 
     const CLASSES = {
-      Bard:      { name: "Bard",      hitDie: 8,  primary: "CHA", saves: ["DEX", "CHA"], weapons: ["Rapier", "Longsword", "Dagger", "Light Crossbow"],    description: "Arcane performer who weaves magic through music, words, and performance." },
-      Cleric:    { name: "Cleric",    hitDie: 8,  primary: "WIS", saves: ["WIS", "CHA"], weapons: ["Mace", "Warhammer", "Light Crossbow"],                 description: "Divine spellcaster channeling the power of a deity through faith and ritual." },
-      Druid:     { name: "Druid",     hitDie: 8,  primary: "WIS", saves: ["INT", "WIS"], weapons: ["Scimitar", "Quarterstaff", "Sickle"],                  description: "Nature spellcaster who shapeshifts and wields primal elemental forces." },
-      Fighter:   { name: "Fighter",   hitDie: 10, primary: "STR", saves: ["STR", "CON"], weapons: ["Greatsword", "Longsword", "Longbow", "Handaxe"],         description: "Martial expert trained in the full spectrum of combat tactics and weaponry." },
-      Monk:      { name: "Monk",      hitDie: 8,  primary: "DEX", saves: ["STR", "DEX"], weapons: ["Shortsword", "Dart"],                                  description: "Unarmed martial artist who channels inner ki into devastating strikes." },
-      Paladin:   { name: "Paladin",   hitDie: 10, primary: "STR", saves: ["WIS", "CHA"], weapons: ["Longsword", "Warhammer", "Javelin"],                     description: "Holy warrior who combines martial prowess with powerful divine magic." },
-      Ranger:    { name: "Ranger",    hitDie: 10, primary: "DEX", saves: ["STR", "DEX"], weapons: ["Shortsword", "Longbow", "Handaxe"],                      description: "Wilderness tracker and hunter with a suite of natural and magical abilities." },
-      Rogue:     { name: "Rogue",     hitDie: 8,  primary: "DEX", saves: ["DEX", "INT"], weapons: ["Rapier", "Shortbow", "Dagger"],                          description: "Cunning operative who strikes with precision and disappears into shadow." },
-      Sorcerer:  { name: "Sorcerer",  hitDie: 6,  primary: "CHA", saves: ["CON", "CHA"], weapons: ["Dagger", "Light Crossbow"],                              description: "Innate spellcaster whose magic flows from blood, a wild font of raw power." },
-      Warlock:   { name: "Warlock",   hitDie: 8,  primary: "CHA", saves: ["WIS", "CHA"], weapons: ["Dagger", "Light Crossbow"],                              description: "Pact-bound caster who draws power from an otherworldly patron entity." },
-      Wizard:    { name: "Wizard",    hitDie: 6,  primary: "INT", saves: ["INT", "WIS"], weapons: ["Quarterstaff", "Dagger"],                                description: "Scholarly spellcaster who learns and copies spells into a personal spellbook." },
-      Barbarian: { name: "Barbarian", hitDie: 12, primary: "STR", saves: ["STR", "CON"], weapons: ["Greataxe", "Handaxe", "Javelin"],                        description: "Fierce primal warrior who enters a furious rage to become an unstoppable force." }
+      Bard:      { name: "Bard",      hitDie: 8,  primary: "CHA", saves: ["DEX", "CHA"], weapons: ["Rapier", "Longsword", "Dagger", "Light Crossbow"] },
+      Cleric:    { name: "Cleric",    hitDie: 8,  primary: "WIS", saves: ["WIS", "CHA"], weapons: ["Mace", "Warhammer", "Light Crossbow"] },
+      Druid:     { name: "Druid",     hitDie: 8,  primary: "WIS", saves: ["INT", "WIS"], weapons: ["Scimitar", "Quarterstaff", "Sickle"] },
+      Fighter:   { name: "Fighter",   hitDie: 10, primary: "STR", saves: ["STR", "CON"], weapons: ["Greatsword", "Longsword", "Longbow", "Handaxe"] },
+      Monk:      { name: "Monk",      hitDie: 8,  primary: "DEX", saves: ["STR", "DEX"], weapons: ["Shortsword", "Dart"] },
+      Paladin:   { name: "Paladin",   hitDie: 10, primary: "STR", saves: ["WIS", "CHA"], weapons: ["Longsword", "Warhammer", "Javelin"] },
+      Ranger:    { name: "Ranger",    hitDie: 10, primary: "DEX", saves: ["STR", "DEX"], weapons: ["Shortsword", "Longbow", "Handaxe"] },
+      Rogue:     { name: "Rogue",     hitDie: 8,  primary: "DEX", saves: ["DEX", "INT"], weapons: ["Rapier", "Shortbow", "Dagger"] },
+      Sorcerer:  { name: "Sorcerer",  hitDie: 6,  primary: "CHA", saves: ["CON", "CHA"], weapons: ["Dagger", "Light Crossbow"] },
+      Warlock:   { name: "Warlock",   hitDie: 8,  primary: "CHA", saves: ["WIS", "CHA"], weapons: ["Dagger", "Light Crossbow"] },
+      Wizard:    { name: "Wizard",    hitDie: 6,  primary: "INT", saves: ["INT", "WIS"], weapons: ["Quarterstaff", "Dagger"] },
+      Barbarian: { name: "Barbarian", hitDie: 12, primary: "STR", saves: ["STR", "CON"], weapons: ["Greataxe", "Handaxe", "Javelin"] }
     };
 
     const CLUBS = {
-      "Fine Artists":       { name: "Distinguished Society of Fine Artists",    skills: ["Performance", "Sleight of Hand"], npc: "Rosie Wirthmore (Year 1)",      description: "For painters, sculptors, and those who manifest raw beauty through magical mediums." },
-      "LARP Guild":         { name: "LARP Guild",                                skills: ["Acrobatics", "Deception"],        npc: "Grayson Wildemere (Year 1)",    description: "Re-enacting historic battles with enchanted padded arms and costume spellwork." },
-      "Strixhaven Star":    { name: "Strixhaven Star Newspaper",                 skills: ["Investigation", "Insight"],       npc: "Jenevelle Rill (Year 1)",       description: "Chasing campus rumors and uncovering the university's deepest academic secrets." },
-      "Drama Society":      { name: "Campus Drama Society",                      skills: ["Performance", "Persuasion"],      npc: "Cadoras Damellawar (Year 1)",   description: "Performing theatrical productions on Silverquill's storied amphitheater stage." },
-      "Silkball Club":      { name: "Intramural Silkball Club",                  skills: ["Athletics", "Acrobatics"],        npc: "Zanther Bowen (Year 1)",        description: "Competing in Strixhaven's premier aerial sport across the magically suspended courts." }
+      "Fine Artists":       { name: "Distinguished Society of Fine Artists",    skills: ["Performance", "Sleight of Hand"], npc: "Rosie Wirthmore (Year 1)" },
+      "LARP Guild":         { name: "LARP Guild",                                skills: ["Acrobatics", "Deception"],        npc: "Grayson Wildemere (Year 1)" },
+      "Strixhaven Star":    { name: "Strixhaven Star Newspaper",                 skills: ["Investigation", "Insight"],       npc: "Jenevelle Rill (Year 1)" },
+      "Drama Society":      { name: "Campus Drama Society",                      skills: ["Performance", "Persuasion"],      npc: "Cadoras Damellawar (Year 1)" },
+      "Silkball Club":      { name: "Intramural Silkball Club",                  skills: ["Athletics", "Acrobatics"],        npc: "Zanther Bowen (Year 1)" }
     };
 
     const ALIGNMENTS = {
-      "Lawful Good":    { archetype: "The Model Prefect",          grid: [0,0], description: "Combines duty with promotion of institutional welfare. Leads by example, mediates disputes, and upholds the academic code even when it costs them personally." },
-      "Neutral Good":   { archetype: "The Dedicated Ensemble Player", grid: [1,0], description: "Community-focused; uplifts teammates and fosters harmony within the system. The backbone of every study group and the first to offer notes to a struggling peer." },
-      "Chaotic Good":   { archetype: "The Passionate Rebel",       grid: [2,0], description: "Values creative freedom over bureaucracy; breaks rules to protect or inspire peers. Challenges unfair policies and champions experimental forms of expression." },
-      "Lawful Neutral": { archetype: "The Rigid Formalist",        grid: [0,1], description: "Operates strictly by the student handbook and a rigid personal code, independent of moral pressure. Efficient, reliable, and entirely unpredictable to emotional appeals." },
-      "True Neutral":   { archetype: "The Focused Academic Artist", grid: [1,1], description: "Detached from campus politics; prefers to observe the multiverse from a careful distance. Excellence in study is the only metric that matters." },
-      "Chaotic Neutral":{ archetype: "The Free-Spirited Maverick", grid: [2,1], description: "Pushes the boundaries of university policy for the sake of personal expression. The first to attempt an untested spell combination and document the results — whatever they may be." },
-      "Lawful Evil":    { archetype: "The Ruthless Curve-Setter",  grid: [0,2], description: "Methodically exploits the university hierarchy and rulebook to ensure their own advancement at any cost, leaving no exploit unused." },
-      "Neutral Evil":   { archetype: "The Unscrupulous Careerist", grid: [1,2], description: "Does whatever they can get away with to succeed, lacking compassion for struggling classmates or campus welfare." },
-      "Chaotic Evil":   { archetype: "The Anarchic Disruptor",     grid: [2,2], description: "Spurred by personal greeds or animosities; acts with arbitrary disregard for campus safety or academic progress." }
+      "Lawful Good":    { archetype: "The Model Prefect",          grid: [0,0] },
+      "Neutral Good":   { archetype: "The Dedicated Ensemble Player", grid: [1,0] },
+      "Chaotic Good":   { archetype: "The Passionate Rebel",       grid: [2,0] },
+      "Lawful Neutral": { archetype: "The Rigid Formalist",        grid: [0,1] },
+      "True Neutral":   { archetype: "The Focused Academic Artist", grid: [1,1] },
+      "Chaotic Neutral":{ archetype: "The Free-Spirited Maverick", grid: [2,1] },
+      "Lawful Evil":    { archetype: "The Ruthless Curve-Setter",  grid: [0,2] },
+      "Neutral Evil":   { archetype: "The Unscrupulous Careerist", grid: [1,2] },
+      "Chaotic Evil":   { archetype: "The Anarchic Disruptor",     grid: [2,2] }
     };
 
     const STIPEND_KITS = {
@@ -168,68 +165,59 @@
 
     const SPELLS_BY_RESONANCE = {
       Destruction: [
-        { name: "Fire Bolt",       level: "Cantrip",   classes: ["Sorcerer","Wizard","Prismari"],        desc: "A flame mote that deals fire damage and ignites flammable objects." },
-        { name: "Ray of Frost",    level: "Cantrip",   classes: ["Sorcerer","Wizard"],                    desc: "Frigid beam dealing cold damage and reducing movement by 10 ft." },
-        { name: "Vicious Mockery", level: "Cantrip",   classes: ["Bard","Silverquill"],                   desc: "Psychic damage + Disadvantage on target's next attack roll." },
-        { name: "Eldritch Blast",  level: "Cantrip",   classes: ["Warlock"],                              desc: "Beam of crackling force energy. A Warlock's bread and butter." },
-        { name: "Sacred Flame",    level: "Cantrip",   classes: ["Cleric","Lorehold","Silverquill"],      desc: "Radiant damage that bypasses the benefits of cover entirely." },
-        { name: "Magic Missile",   level: "1st-level", classes: ["Sorcerer","Wizard"],                    desc: "Three auto-hitting force darts. Never misses; reliable on low-hit-chance fights." },
-        { name: "Burning Hands",   level: "1st-level", classes: ["Sorcerer","Wizard"],                    desc: "15-foot cone of fire. High damage, but requires close range." },
-        { name: "Chromatic Orb",   level: "1st-level", classes: ["Sorcerer","Wizard"],                    desc: "Sphere of chosen energy type: acid, cold, fire, lightning, poison, or thunder." },
-        { name: "Guiding Bolt",    level: "1st-level", classes: ["Cleric"],                               desc: "Radiant damage + Advantage on the next attack against the target." },
-        { name: "Hellish Rebuke",  level: "1st-level", classes: ["Warlock"],                              desc: "Reaction: wreath attacker in hellfire after they damage you." }
+        { name: "Fire Bolt",       level: "Cantrip",   classes: ["Sorcerer","Wizard","Prismari"] },
+        { name: "Ray of Frost",    level: "Cantrip",   classes: ["Sorcerer","Wizard"] },
+        { name: "Vicious Mockery", level: "Cantrip",   classes: ["Bard","Silverquill"] },
+        { name: "Eldritch Blast",  level: "Cantrip",   classes: ["Warlock"] },
+        { name: "Sacred Flame",    level: "Cantrip",   classes: ["Cleric","Lorehold","Silverquill"] },
+        { name: "Magic Missile",   level: "1st-level", classes: ["Sorcerer","Wizard"] },
+        { name: "Burning Hands",   level: "1st-level", classes: ["Sorcerer","Wizard"] },
+        { name: "Chromatic Orb",   level: "1st-level", classes: ["Sorcerer","Wizard"] },
+        { name: "Guiding Bolt",    level: "1st-level", classes: ["Cleric"] },
+        { name: "Hellish Rebuke",  level: "1st-level", classes: ["Warlock"] }
       ],
       Control: [
-        { name: "Minor Illusion",  level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"],   desc: "Creates a sound or image to distract and misdirect enemies." },
-        { name: "Blade Ward",      level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"],   desc: "Resistance to bludgeoning, piercing, and slashing for one round." },
-        { name: "Thunderwave",     level: "1st-level", classes: ["Bard","Druid","Sorcerer","Wizard","Prismari"], desc: "15-foot cube: thunder damage + push enemies 10 ft back. Ideal for rafters." },
-        { name: "Bane",            level: "1st-level", classes: ["Bard","Cleric","Warlock"],               desc: "Curses 3 targets: subtract 1d4 from attack rolls and saving throws." },
-        { name: "Hideous Laughter",level: "1st-level", classes: ["Bard","Wizard"],                        desc: "Target falls prone and is incapacitated with uncontrollable laughter." },
-        { name: "Faerie Fire",     level: "1st-level", classes: ["Bard","Druid"],                         desc: "Outlines all creatures in area with light; grants Advantage on attacks against them." },
-        { name: "Entangle",        level: "1st-level", classes: ["Druid","Quandrix"],                     desc: "Grasping weeds restrain creatures in a 20-foot square of difficult terrain." },
-        { name: "Fog Cloud",       level: "1st-level", classes: ["Druid","Sorcerer","Wizard"],            desc: "Dense 20-foot sphere obscures all vision. Classic zone-denial." },
-        { name: "Charm Person",    level: "1st-level", classes: ["Bard","Druid","Sorcerer","Warlock","Wizard"], desc: "A humanoid sees you as a trusted, friendly acquaintance." },
-        { name: "Color Spray",     level: "1st-level", classes: ["Bard","Sorcerer","Wizard"],             desc: "Flash of vivid color blinds creatures in a cone area." }
+        { name: "Minor Illusion",  level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+        { name: "Blade Ward",      level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+        { name: "Thunderwave",     level: "1st-level", classes: ["Bard","Druid","Sorcerer","Wizard","Prismari"] },
+        { name: "Bane",            level: "1st-level", classes: ["Bard","Cleric","Warlock"] },
+        { name: "Hideous Laughter",level: "1st-level", classes: ["Bard","Wizard"] },
+        { name: "Faerie Fire",     level: "1st-level", classes: ["Bard","Druid"] },
+        { name: "Entangle",        level: "1st-level", classes: ["Druid","Quandrix"] },
+        { name: "Fog Cloud",       level: "1st-level", classes: ["Druid","Sorcerer","Wizard"] },
+        { name: "Charm Person",    level: "1st-level", classes: ["Bard","Druid","Sorcerer","Warlock","Wizard"] },
+        { name: "Color Spray",     level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] }
       ],
       Harmony: [
-        { name: "Guidance",        level: "Cantrip",   classes: ["Cleric","Druid","Quandrix","Witherbloom"], desc: "Grants a d4 bonus to one ability check. Invaluable for academic exams." },
-        { name: "Resistance",      level: "Cantrip",   classes: ["Cleric","Druid"],                       desc: "Grants a d4 bonus to a saving throw of the target's choice." },
-        { name: "Spare the Dying", level: "Cantrip",   classes: ["Cleric","Witherbloom"],                 desc: "Instantly stabilizes a creature at 0 HP. No more death saves needed." },
-        { name: "Mending",         level: "Cantrip",   classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"], desc: "Repairs a break or tear in an object. Useful for instrument maintenance." },
-        { name: "Cure Wounds",     level: "1st-level", classes: ["Bard","Cleric","Druid","Paladin","Ranger","Prismari","Witherbloom"], desc: "Heals a touched creature using your spellcasting modifier." },
-        { name: "Healing Word",    level: "1st-level", classes: ["Bard","Cleric","Druid"],                desc: "Bonus-action vocal healing. Restores HP from a distance." },
-        { name: "Bless",           level: "1st-level", classes: ["Cleric","Paladin"],                     desc: "Grants 3 allies a d4 bonus to all attack rolls and saving throws." },
-        { name: "Heroism",         level: "1st-level", classes: ["Bard","Paladin"],                       desc: "Immune to Frightened + temporary HP each turn for the duration." },
-        { name: "Shield",          level: "1st-level", classes: ["Sorcerer","Wizard","Prismari"],         desc: "+5 AC as a reaction. Also blocks Magic Missile automatically." },
-        { name: "Detect Magic",    level: "1st-level", classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"], desc: "Sense magical auras within 30 feet. Glowing outlines reveal hidden enchantments." }
+        { name: "Guidance",        level: "Cantrip",   classes: ["Cleric","Druid","Quandrix","Witherbloom"] },
+        { name: "Resistance",      level: "Cantrip",   classes: ["Cleric","Druid"] },
+        { name: "Spare the Dying", level: "Cantrip",   classes: ["Cleric","Witherbloom"] },
+        { name: "Mending",         level: "Cantrip",   classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"] },
+        { name: "Cure Wounds",     level: "1st-level", classes: ["Bard","Cleric","Druid","Paladin","Ranger","Prismari","Witherbloom"] },
+        { name: "Healing Word",    level: "1st-level", classes: ["Bard","Cleric","Druid"] },
+        { name: "Bless",           level: "1st-level", classes: ["Cleric","Paladin"] },
+        { name: "Heroism",         level: "1st-level", classes: ["Bard","Paladin"] },
+        { name: "Shield",          level: "1st-level", classes: ["Sorcerer","Wizard","Prismari"] },
+        { name: "Detect Magic",    level: "1st-level", classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"] }
       ]
     };
 
     const PERSONALITY_TRAITS = [
       "I always have a witty remark ready, even in the most inappropriate situations.",
       "I lose myself completely in whatever creative project I am currently working on.",
-      "I express my deepest emotions through performance rather than direct words.",
-      "I am extremely curious about other people's lives and never miss a chance to learn.",
-      "I treat every social interaction as a potential collaboration or a future audience.",
-      "I see patterns and connections everywhere — in music, in numbers, in the flight of birds."
+      "I express my deepest emotions through performance rather than direct words."
     ];
 
     const IDEALS = [
       "Creativity: Art is meant to push boundaries and challenge the established order. (Chaotic)",
       "Community: Every ensemble member matters. We rise together or not at all. (Good)",
-      "Knowledge: Every experience is research material; even failure teaches. (Any)",
-      "Expression: Authentic self-expression is the highest form of magic. (Chaotic)",
-      "Excellence: Mediocrity is a form of disrespect to one's craft and one's college. (Lawful)",
-      "Freedom: Rules are suggestions; true inspiration knows no restriction. (Chaotic)"
+      "Knowledge: Every experience is research material; even failure teaches. (Any)"
     ];
 
     const BONDS = [
       "My performance troupe is my found family; I would sacrifice anything to protect them.",
       "A particular faculty mentor saw potential in me when no one else did.",
-      "I came to Strixhaven to prove something essential to my family back home.",
-      "My instrument or focus belonged to someone important I have lost.",
-      "I am searching for a technique or piece of forbidden knowledge hidden in the archives.",
-      "My college rivalry with another student quietly pushes me to exceed my own limits."
+      "I came to Strixhaven to prove something essential to my family back home."
     ];
 
     const FLAWS_BY_STAT = {
@@ -243,54 +231,36 @@
 
     const NAME_BUCKETS = {
       lineage: {
-        label: "🧬 Lineage / Heritage Names",
+        label: "ðŸ§¬ Lineage / Heritage Names",
         Owlin: ["Sylvara", "Morrith", "Talvyn", "Hoowyn", "Feathrix", "Vespa"],
         Human: ["Calder", "Mira", "Theron", "Sable", "Evyn", "Rowan"],
-        Elf: ["Aelindra", "Caladrel", "Silverwyn", "Thaliondir", "Erindel", "Lirien"],
-        Dwarf: ["Brunna", "Torvald", "Greta", "Hamric", "Dagni", "Bofrik"],
-        Tiefling: ["Vesper", "Azariel", "Scorch", "Malva", "Cindrix", "Zara"],
-        Gnome: ["Wobble", "Fizwick", "Ninka", "Sprocket", "Luminara", "Glib"],
-        Halfling: ["Pippa", "Merry", "Clover", "Roswyn", "Tansy", "Bilbo"],
-        Aasimar: ["Aurelius", "Celestine", "Soleil", "Radiance", "Lucen", "Serapha"],
-        Orc: ["Gorthak", "Morda", "Brenna", "Ursa", "Krag", "Valda"],
         default: ["Caelum", "Liriel", "Varis", "Sera", "Thorn", "Evren"]
       },
       college: {
-        label: "🎓 College / Aesthetic Names",
+        label: "ðŸŽ“ College / Aesthetic Names",
         Prismari: ["Blazara", "Frostwick", "Stormsong", "Emberholt", "Galewing", "Cinder"],
         Silverquill: ["Inkborne", "Quillstrike", "Shadevoice", "Pencraft", "Blottrix", "Crimsontongue"],
-        Quandrix: ["Axiom", "Tessera", "Logarith", "Spiral", "Fractaline", "Archimedes"],
-        Witherbloom: ["Thornvine", "Mosswhisper", "Dewthorn", "Rotleaf", "Ivysong", "Mulch"],
-        Lorehold: ["Stonearch", "Dustwhisper", "Archaeon", "Relic", "Vaultkeeper", "Carven"],
         default: ["Stardust", "Prismway", "Wandermere", "Brightquill", "Lorewright", "Aethon"]
       },
       ironic: {
-        label: "😅 Ironic / Flaw-Contrast Names",
+        label: "ðŸ˜… Ironic / Flaw-Contrast Names",
         DEX: ["Grace", "Nimble", "Swift", "Fleetfoot", "Sure-Step", "Airy"],
         STR: ["Atlas", "Boulder", "Ironside", "Grit", "Hefty", "Titan"],
-        CON: ["Endure", "Stalwart", "Tireless", "Oakhart", "Steadfast", "Ironlung"],
-        INT: ["Scholar", "Sage", "Bright", "Luminary", "Summa", "Prodigy"],
-        WIS: ["Oracle", "Foresight", "Serenity", "Clairvoyant", "Aware", "Mindful"],
-        CHA: ["Allure", "Heartwarming", "Magnetic", "Radiant", "Charming", "Vivid"],
         default: ["Serendipity", "Fortuna", "Brilliance", "Ironwill", "Destiny", "Triumph"]
       }
     };
-
-    // ─── APP COMPONENT ────────────────────────────────────────────────────────────
 
     function App() {
       const [phase, setPhase] = useState(1);
       const [activeSheetTab, setActiveSheetTab] = useState(1);
       const [isSaving, setIsSaving] = useState(false);
 
-      // Interactive Chat State — sole driver of the app
       const [chatHistory, setChatHistory] = useState([]);
       const [chatInput, setChatInput] = useState('');
       const [isChatLoading, setIsChatLoading] = useState(false);
       const chatEndRef = useRef(null);
       const hasInitialized = useRef(false);
 
-      // Phases State
       const [selectedLineage, setSelectedLineage] = useState("Human");
       const [selectedSize, setSelectedSize] = useState("Medium");
       const [selectedClass, setSelectedClass] = useState("Bard");
@@ -311,10 +281,9 @@
       const [characterName, setCharacterName] = useState("");
       const [playerName, setPlayerName] = useState("");
       const [backstory, setBackstory] = useState("");
-      const [customJobs] = useState({ employer: "Firejolt Café", coworker: "Tavern Keep" });
+      const [customJobs] = useState({ employer: "Firejolt CafÃ©", coworker: "Tavern Keep" });
       const [npcRelationships] = useState([{ name: "Rosie Wirthmore", points: 1, relationship: "Art Class Buddy" }]);
 
-      // Math Helpers
       const getScore  = (stat) => statAssignments[stat] ?? 10;
       const getMod    = (stat) => Math.floor((getScore(stat) - 10) / 2);
       const getModStr = (stat) => { const m = getMod(stat); return m >= 0 ? `+${m}` : `${m}`; };
@@ -325,7 +294,6 @@
       const getSpellSaveDC = () => 8 + 2 + getMod(getSpellAbility());
       const getSpellAtk    = () => { const m = getMod(getSpellAbility()); return m >= 0 ? `+${2 + m}` : `${2 + m}`; };
 
-      // Get relevant game data for current phase to send to AI
       const getGameDataForPhase = (phaseNum) => {
         switch (phaseNum) {
           case 1: return { lineages: LINEAGES };
@@ -343,7 +311,6 @@
         }
       };
 
-      // Apply system updates from AI response to React state
       const applySystemUpdates = (updates) => {
         if (!updates) return;
         if (updates.nextPhaseNumber != null) {
@@ -385,7 +352,6 @@
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, [chatHistory, isChatLoading]);
 
-      // Auto-start conversation on load
       useEffect(() => {
         if (hasInitialized.current) return;
         hasInitialized.current = true;
@@ -422,8 +388,50 @@
         } catch (e) { console.error(e); alert("Failed to save. Check console."); }
         setIsSaving(false);
       };
+      
+      const downloadCharacterSheet = () => {
+        const content = `
+=========================================
+STRIXHAVEN UNIVERSITY - OFFICIAL TRANSCRIPT
+=========================================
+Student Name: ${characterName || "Unnamed Student"}
+Lineage: ${selectedLineage} (${selectedSize})
+Class: ${selectedClass}
+College: ${selectedCollege}
+Alignment: ${alignment}
 
-      // Handle Interactive Exam Chat submission — sole driver of the app
+--- CORE ATTRIBUTES ---
+STR: ${getScore('STR')} (${getModStr('STR')})
+DEX: ${getScore('DEX')} (${getModStr('DEX')})
+CON: ${getScore('CON')} (${getModStr('CON')})
+INT: ${getScore('INT')} (${getModStr('INT')})
+WIS: ${getScore('WIS')} (${getModStr('WIS')})
+CHA: ${getScore('CHA')} (${getModStr('CHA')})
+
+--- ACADEMICS & EXTRACURRICULARS ---
+Club: ${CLUBS[selectedClub]?.name || "None"}
+Skills: ${selectedSkills.join(", ")}
+Tool Focus: ${selectedTool}
+Equipment: ${selectedWeapon}, ${STIPEND_KITS[selectedStipend]?.name}
+
+--- MAGIC & SPELLS ---
+Spellcasting Ability: ${getSpellAbility()}
+Spell Save DC: ${getSpellSaveDC()}
+Known Spells: ${selectedSpells.join(", ")}
+
+--- PERSONALITY PROFILE ---
+Flaw: ${flaw}
+`;
+        const blob = new Blob([content.trim()], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${(characterName || "Strixhaven_Student").replace(/\s+/g, '_')}_Sheet.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
       const handleChatSubmit = async () => {
         if (!chatInput.trim() || isChatLoading) return;
         const userMsg = chatInput.trim();
@@ -476,7 +484,7 @@
                   <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
                 </div>
                 <div className="bg-indigo-950/60 border border-indigo-500/20 px-3 py-2 rounded-xl rounded-tl-sm text-xs text-indigo-300 italic">
-                  <i className="fa-solid fa-ellipsis fa-fade mr-1 text-indigo-400"></i>Proctor is writing…
+                  <i className="fa-solid fa-ellipsis fa-fade mr-1 text-indigo-400"></i>Proctor is writingâ€¦
                 </div>
               </div>
             )}
@@ -488,7 +496,7 @@
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
-              placeholder="Speak to the Admissions Proctor…"
+              placeholder="Speak to the Admissions Proctorâ€¦"
               className="flex-1 bg-slate-950 border border-indigo-900/50 rounded-lg px-3 py-2 text-xs text-indigo-100 focus:border-indigo-500 outline-none placeholder:text-indigo-800"
             />
             <button
@@ -511,7 +519,7 @@
             <div className="space-y-4">
               <div className="border-b-2 border-[#2c2214] pb-3">
                 <h2 className="text-lg font-bold font-serif">{characterName || "Unnamed Student"}</h2>
-                <p className="text-xs text-[#66543b] mt-0.5">{cls.name || "—"} 1 · {selectedCollege} · {selectedLineage} · {alignment}</p>
+                <p className="text-xs text-[#66543b] mt-0.5">{cls.name || "â€”"} 1 Â· {selectedCollege} Â· {selectedLineage} Â· {alignment}</p>
               </div>
               <div className="grid grid-cols-3 gap-2">
                 {["STR","DEX","CON","INT","WIS","CHA"].map(stat => {
@@ -520,7 +528,7 @@
                   return (
                     <div key={stat} className="border-2 rounded-xl p-2 bg-[#f9f5eb] text-center shadow-sm border-[#2c2214]">
                       <span className="text-[8px] font-bold text-slate-500 uppercase">{stat}</span>
-                      <span className="text-sm font-extrabold block text-amber-900">{mod !== null ? (mod >= 0 ? `+${mod}` : mod) : "—"}</span>
+                      <span className="text-sm font-extrabold block text-amber-900">{mod !== null ? (mod >= 0 ? `+${mod}` : mod) : "â€”"}</span>
                     </div>
                   );
                 })}
@@ -546,16 +554,15 @@
 
       return (
         <div className="flex flex-col lg:flex-row h-screen">
-          {/* LEFT: PROCTOR CHAT — Sole driver of the application */}
+          {/* LEFT: PROCTOR CHAT â€” Sole driver of the application */}
           <section className="w-full lg:w-1/2 border-r border-slate-800 flex flex-col bg-slate-900/40 overflow-hidden">
-            {/* Fixed header */}
             <div className="px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
               <header className="mb-4 border-b border-amber-500/30 pb-4">
                 <h1 className="text-xl font-bold tracking-wider text-amber-400 font-serif">
                   <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN UNIVERSITY
                 </h1>
                 <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">
-                  Admissions Proctor — Phase {phase} of 11
+                  Admissions Proctor â€” Phase {phase} of 11
                 </p>
                 <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2">
                   <div className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full transition-all duration-500" style={{ width: `${(phase / 11) * 100}%` }}></div>
@@ -563,20 +570,22 @@
               </header>
             </div>
 
-            {/* Chat area fills remaining space */}
             <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-6 pb-4 pt-1">
               <div className="text-[10px] text-indigo-400/60 uppercase tracking-wider pb-2 flex items-center gap-2 flex-shrink-0">
                 <i className="fa-solid fa-circle-dot fa-beat text-indigo-500/70 text-[8px]"></i>
-                Live Session — Phase {phase} active
+                Live Session â€” Phase {phase} active
               </div>
               {renderChat()}
             </div>
 
-            {/* Submit button on Phase 11 */}
+            {/* Submit & Download buttons on Phase 11 */}
             {phase >= 11 && (
-              <div className="flex-shrink-0 px-4 md:px-6 py-4 border-t border-slate-800/80 flex justify-end">
+              <div className="flex-shrink-0 px-4 md:px-6 py-4 border-t border-slate-800/80 flex justify-end gap-3">
+                <button onClick={downloadCharacterSheet} className="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
+                  <i className="fa-solid fa-file-arrow-down mr-2"></i>Download Sheet
+                </button>
                 <button onClick={submitToFirebase} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
-                  <i className="fa-solid fa-cloud-arrow-up mr-2"></i>{isSaving ? "Syncing…" : "Submit Enrollment"}
+                  <i className="fa-solid fa-cloud-arrow-up mr-2"></i>{isSaving ? "Syncing..." : "Submit Enrollment"}
                 </button>
               </div>
             )}
