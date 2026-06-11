@@ -396,7 +396,7 @@
           const gameData = getGameDataForPhase(1);
           try {
             const response = await window.askAdmissionsAI([], initPrompt, gameData);
-            const proctorMsg = response.proctorMessage || response;
+            const proctorMsg = response.proctorMessage || response.response || "Welcome to the Strixhaven Biblioplex.";
             setChatHistory([{ role: 'proctor', text: proctorMsg }]);
             if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
           } catch (err) {
@@ -436,7 +436,7 @@
 
         try {
           const response = await window.askAdmissionsAI(newHistory, userMsg, gameData);
-          const proctorMsg = response.proctorMessage || 'The Proctor nods thoughtfully...';
+          const proctorMsg = response.proctorMessage || response.response || 'The Proctor nods thoughtfully...';
           setChatHistory(prev => [...prev, { role: 'proctor', text: proctorMsg }]);
           if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
         } catch {
