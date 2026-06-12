@@ -180,15 +180,15 @@
       // nextPhaseNumber must be a real integer
       if ('nextPhaseNumber' in s) {
         const n = parseInt(s.nextPhaseNumber, 10);
-        s.nextPhaseNumber = isNaN(n) ? null : n;
+        if (isNaN(n)) delete s.nextPhaseNumber; else s.nextPhaseNumber = n;
       }
 
-      // statAssignments values must be numbers
+      // statAssignments values must be numbers; drop any key whose value can't be parsed
       if (s.statAssignments && typeof s.statAssignments === 'object' && !Array.isArray(s.statAssignments)) {
         const clean = {};
         for (const [k, v] of Object.entries(s.statAssignments)) {
           const n = parseInt(v, 10);
-          clean[k] = isNaN(n) ? null : n;
+          if (!isNaN(n)) clean[k] = n;
         }
         s.statAssignments = clean;
       } else if ('statAssignments' in s) {
@@ -356,6 +356,9 @@
 
       // Auto-save fires after a full chat turn completes (isChatLoading: true → false),
       // ensuring all state updates from applySystemUpdates have already been committed.
+      // submitToFirebase is intentionally omitted from deps: it is re-created every render
+      // and adding it would cause the effect to fire on every render, not just on loading transitions.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       useEffect(() => {
         if (prevLoadingRef.current && !isChatLoading && isAuthenticated && chatHistory.length > 0) {
           submitToFirebase(true);
