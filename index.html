@@ -173,6 +173,52 @@
       ]
     };
 
+    const sanitizeSystemUpdates = (updates) => {
+      if (!updates || typeof updates !== 'object' || Array.isArray(updates)) return null;
+      const s = { ...updates };
+
+      // nextPhaseNumber must be a real integer
+      if ('nextPhaseNumber' in s) {
+        const n = parseInt(s.nextPhaseNumber, 10);
+        if (isNaN(n)) delete s.nextPhaseNumber; else s.nextPhaseNumber = n;
+      }
+
+      // statAssignments values must be numbers; drop any key whose value can't be parsed
+      if (s.statAssignments && typeof s.statAssignments === 'object' && !Array.isArray(s.statAssignments)) {
+        const clean = {};
+        for (const [k, v] of Object.entries(s.statAssignments)) {
+          const n = parseInt(v, 10);
+          if (!isNaN(n)) clean[k] = n;
+        }
+        s.statAssignments = clean;
+      } else if ('statAssignments' in s) {
+        delete s.statAssignments;
+      }
+
+      // spell/skill arrays must be arrays of plain strings
+      for (const key of ['selectedSpells', 'selectedSkills']) {
+        if (key in s) {
+          if (!Array.isArray(s[key])) {
+            s[key] = typeof s[key] === 'string' ? [s[key]] : [];
+          }
+          s[key] = s[key].filter(x => typeof x === 'string');
+        }
+      }
+
+      // all remaining string fields must actually be strings
+      const stringFields = [
+        'selectedLineage','selectedSize','selectedClass','selectedCollege','selectedClub',
+        'selectedTool','selectedStipend','selectedWeapon','selectedArmor','selectedLanguage',
+        'resonanceType','selectedTrait','selectedIdeal','selectedBond','alignment','flaw',
+        'characterName','backstory'
+      ];
+      for (const field of stringFields) {
+        if (field in s && typeof s[field] !== 'string') delete s[field];
+      }
+
+      return s;
+    };
+
     function App() {
       const [isAuthenticated, setIsAuthenticated] = useState(false);
       const [loginMode, setLoginMode] = useState('new'); 
@@ -189,6 +235,7 @@
       const [isChatLoading, setIsChatLoading] = useState(false);
       const chatEndRef = useRef(null);
       const hasInitialized = useRef(false);
+      const prevLoadingRef = useRef(false);
 
       const [selectedLineage, setSelectedLineage] = useState("Human");
       const [selectedSize, setSelectedSize] = useState("Medium");
@@ -244,7 +291,12 @@
 
       const loadStudentData = (data) => {
         if (data.phase) setPhase(data.phase);
-        if (data.chatHistory) setChatHistory(data.chatHistory);
+        if (data.chatHistory) {
+          const safeHistory = Array.isArray(data.chatHistory)
+            ? data.chatHistory.filter(m => m && typeof m.role === 'string' && typeof m.text === 'string')
+            : [];
+          setChatHistory(safeHistory);
+        }
         if (data.selectedLineage) setSelectedLineage(data.selectedLineage);
         if (data.selectedSize) setSelectedSize(data.selectedSize);
         if (data.selectedClass) setSelectedClass(data.selectedClass);
@@ -302,6 +354,18 @@
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, [chatHistory, isChatLoading]);
 
+      // Auto-save fires after a full chat turn completes (isChatLoading: true → false),
+      // ensuring all state updates from applySystemUpdates have already been committed.
+      // submitToFirebase is intentionally omitted from deps: it is re-created every render
+      // and adding it would cause the effect to fire on every render, not just on loading transitions.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      useEffect(() => {
+        if (prevLoadingRef.current && !isChatLoading && isAuthenticated && chatHistory.length > 0) {
+          submitToFirebase(true);
+        }
+        prevLoadingRef.current = isChatLoading;
+      }, [isChatLoading]);
+
       const handleLogin = async (e) => {
         e.preventDefault();
         setAuthError('');
@@ -348,7 +412,7 @@
             const response = await window.askAdmissionsAI([], initPrompt, getGameDataForPhase(1));
             const proctorMsg = response.proctorMessage || response.response || "Welcome to the Strixhaven Biblioplex.";
             setChatHistory([{ role: 'proctor', text: proctorMsg }]);
-            if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
+            if (response.systemUpdates) applySystemUpdates(sanitizeSystemUpdates(response.systemUpdates));
           } catch (err) {
             setChatHistory([{ role: 'proctor', text: 'Welcome. I am your Admissions Proctor. How do you perceive your place in the multiverse? A) Physical Pioneer B) Intellectual Observer C) Social Conduit D) Resilient Survivor' }]);
           }
@@ -449,13 +513,11 @@ ${backstory}
         setChatHistory(newHistory);
         setIsChatLoading(true);
 
-        submitToFirebase(true);
-
         try {
           const response = await window.askAdmissionsAI(newHistory, userMsg, getGameDataForPhase(phase));
           const proctorMsg = response.proctorMessage || response.response || 'The Proctor nods thoughtfully...';
           setChatHistory(prev => [...prev, { role: 'proctor', text: proctorMsg }]);
-          if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
+          if (response.systemUpdates) applySystemUpdates(sanitizeSystemUpdates(response.systemUpdates));
         } catch {
           setChatHistory(prev => [...prev, { role: 'proctor', text: 'The Biblioplex archives are currently unreachable. Please try again later.' }]);
         }

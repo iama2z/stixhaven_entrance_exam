@@ -44,6 +44,7 @@ Your JSON schema MUST look exactly like this template. Include ONLY the keys tha
   "systemUpdates": {
     "nextPhaseNumber": 2,
     "selectedLineage": "Owlin",
+    "selectedSize": "Medium",
     "selectedClass": "Bard",
     "selectedCollege": "Prismari",
     "selectedClub": "Drama Society",
@@ -76,10 +77,12 @@ exports.strixhavenConsultant = onCall(
         const latestMessage = requestData.latestMessage || "Introduce yourself and begin Phase 1.";
         const gameData = requestData.gameData || {};
 
-        let historyForGemini = chatHistory.slice(0, -1).map(msg => ({
-          role: msg.role === 'proctor' ? 'model' : 'user',
-          parts: [{ text: msg.text }]
-        }));
+        let historyForGemini = chatHistory.slice(0, -1)
+          .filter(msg => msg && typeof msg.role === 'string' && typeof msg.text === 'string')
+          .map(msg => ({
+            role: msg.role === 'proctor' ? 'model' : 'user',
+            parts: [{ text: String(msg.text) }]
+          }));
 
         while (historyForGemini.length > 0 && historyForGemini[0].role === 'model') {
           historyForGemini.shift();
