@@ -213,7 +213,7 @@
       const [characterName, setCharacterName] = useState("");
       const [backstory, setBackstory] = useState("");
 
-      // SAFEGUARD: Ensure data structures never crash even if malformed from Firebase
+      // SAFEGUARD
       const safeSpells = Array.isArray(selectedSpells) ? selectedSpells : [];
       const safeSkills = Array.isArray(selectedSkills) ? selectedSkills : [];
 
@@ -258,7 +258,6 @@
         if (data.selectedLanguage) setSelectedLanguage(data.selectedLanguage);
         if (data.resonanceType) setResonanceType(data.resonanceType);
         
-        // SAFEGUARD: Enforce arrays
         if (data.selectedSpells) setSelectedSpells(Array.isArray(data.selectedSpells) ? data.selectedSpells : [data.selectedSpells]);
         if (data.selectedSkills) setSelectedSkills(Array.isArray(data.selectedSkills) ? data.selectedSkills : [data.selectedSkills]);
         
@@ -287,7 +286,6 @@
         if (updates.selectedLanguage != null) setSelectedLanguage(updates.selectedLanguage);
         if (updates.resonanceType != null) setResonanceType(updates.resonanceType);
         
-        // SAFEGUARD: Enforce arrays
         if (updates.selectedSpells != null) setSelectedSpells(Array.isArray(updates.selectedSpells) ? updates.selectedSpells : [updates.selectedSpells]);
         if (updates.selectedSkills != null) setSelectedSkills(Array.isArray(updates.selectedSkills) ? updates.selectedSkills : [updates.selectedSkills]);
         
@@ -464,6 +462,64 @@ ${backstory}
         setIsChatLoading(false);
       };
 
+      // RESTORED RENDER CHAT FUNCTION
+      const renderChat = () => (
+        <>
+          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+            {chatHistory.map((msg, i) => (
+              <div key={i} className={`flex items-start ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {msg.role === 'proctor' && (
+                  <div className="w-6 h-6 rounded-full bg-indigo-900 border border-indigo-500/40 flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
+                    <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
+                  </div>
+                )}
+                <div className={`max-w-[80%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
+                  msg.role === 'user'
+                    ? 'bg-amber-500/20 border border-amber-500/30 text-amber-100 rounded-tr-sm'
+                    : 'bg-indigo-950/60 border border-indigo-500/20 text-indigo-100 rounded-tl-sm'
+                }`}>
+                  {msg.role === 'proctor' && <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Proctor</span>}
+                  {msg.text}
+                </div>
+                {msg.role === 'user' && (
+                  <div className="w-6 h-6 rounded-full bg-amber-900 border border-amber-500/40 flex items-center justify-center ml-2 flex-shrink-0 mt-0.5">
+                    <i className="fa-solid fa-user-graduate text-amber-400 text-[8px]"></i>
+                  </div>
+                )}
+              </div>
+            ))}
+            {isChatLoading && (
+              <div className="flex items-start">
+                <div className="w-6 h-6 rounded-full bg-indigo-900 border border-indigo-500/40 flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
+                  <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
+                </div>
+                <div className="bg-indigo-950/60 border border-indigo-500/20 px-3 py-2 rounded-xl rounded-tl-sm text-xs text-indigo-300 italic">
+                  <i className="fa-solid fa-ellipsis fa-fade mr-1 text-indigo-400"></i>Proctor is writing...
+                </div>
+              </div>
+            )}
+            <div ref={chatEndRef} />
+          </div>
+          <div className="flex gap-2 mt-3 pt-3 border-t border-indigo-900/40 flex-shrink-0">
+            <input
+              type="text"
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
+              placeholder="Speak to the Admissions Proctor..."
+              className="flex-1 bg-slate-950 border border-indigo-900/50 rounded-lg px-3 py-2 text-xs text-indigo-100 focus:border-indigo-500 outline-none placeholder:text-indigo-800"
+            />
+            <button
+              onClick={handleChatSubmit}
+              disabled={isChatLoading || !chatInput.trim()}
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow transition-all whitespace-nowrap"
+            >
+              {isChatLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-paper-plane mr-1"></i>Send</>}
+            </button>
+          </div>
+        </>
+      );
+
       const renderSheet = () => {
         const cls = CLASSES[selectedClass] || { name: "Student" };
 
@@ -534,7 +590,6 @@ ${backstory}
             const expectedCantrips = baseCap.cantrips + 2; 
             const expectedSpells = baseCap.spells + 1; 
 
-            // SAFEGUARD: Universally compatible flattening mechanism
             const allSpells = Object.values(SPELLS_BY_RESONANCE).reduce((acc, val) => acc.concat(val), []);
             
             const cantrips = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "Cantrip");
@@ -705,7 +760,7 @@ ${backstory}
           </section>
 
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.5.1 - Data Safeguard Update
+            v1.5.2 - Chat Restored
           </div>
 
         </div>
