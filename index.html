@@ -451,6 +451,27 @@ Flaw: ${flaw}
                 <h2 className="text-lg font-bold font-serif">{characterName || "Unnamed Student"}</h2>
                 <p className="text-xs text-[#66543b] mt-0.5">{cls.name || "-"} 1 • {selectedCollege} • {selectedLineage} • {alignment}</p>
               </div>
+
+              {/* NEW: COMBAT STATS ROW VISIBLE ON UI */}
+              <div className="grid grid-cols-4 gap-2 mb-2">
+                <div className="border-2 rounded-xl p-2 bg-red-900/10 text-center border-red-900/20">
+                  <span className="text-[8px] font-bold text-red-900/70 uppercase">Max HP</span>
+                  <span className="text-sm font-extrabold block text-red-900">{getMaxHP()}</span>
+                </div>
+                <div className="border-2 rounded-xl p-2 bg-slate-900/10 text-center border-slate-900/20">
+                  <span className="text-[8px] font-bold text-slate-700 uppercase">Armor (AC)</span>
+                  <span className="text-sm font-extrabold block text-slate-900">{getAC()}</span>
+                </div>
+                <div className="border-2 rounded-xl p-2 bg-emerald-900/10 text-center border-emerald-900/20">
+                  <span className="text-[8px] font-bold text-emerald-900/70 uppercase">Initiative</span>
+                  <span className="text-sm font-extrabold block text-emerald-900">{getModStr('DEX')}</span>
+                </div>
+                <div className="border-2 rounded-xl p-2 bg-amber-900/10 text-center border-amber-900/20">
+                  <span className="text-[8px] font-bold text-amber-900/70 uppercase">Speed</span>
+                  <span className="text-sm font-extrabold block text-amber-900">{LINEAGES[selectedLineage]?.speed || 30}</span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-2">
                 {["STR","DEX","CON","INT","WIS","CHA"].map(stat => {
                   const score = statAssignments[stat];
@@ -474,8 +495,12 @@ Flaw: ${flaw}
           );
           case 4: return (
             <div className="space-y-3 text-xs">
-              <p className="font-bold text-amber-950">{CLUBS[selectedClub]?.name || "No club selected"}</p>
-              <p className="text-slate-600">Stipend: {STIPEND_KITS[selectedStipend]?.name || "None"}</p>
+              <p className="font-bold text-amber-950 text-sm border-b border-[#2c2214] pb-1">Campus Life</p>
+              <p><span className="font-bold text-slate-700">Club:</span> {CLUBS[selectedClub]?.name || "No club selected"}</p>
+              <p><span className="font-bold text-slate-700">Stipend:</span> {STIPEND_KITS[selectedStipend]?.name || "None"}</p>
+              <p><span className="font-bold text-slate-700">Languages:</span> Common, {selectedLanguage}</p>
+              <p><span className="font-bold text-slate-700">Armor Focus:</span> {selectedArmor}</p>
+              <p><span className="font-bold text-slate-700">Proficiency Bonus:</span> +2</p>
             </div>
           );
           default: return null;
@@ -570,7 +595,7 @@ Flaw: ${flaw}
           </section>
 
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.3.1 - Combat Stats & Auto-Save Fix
+            v1.3.2 - UI Combat Stats
           </div>
 
         </div>
