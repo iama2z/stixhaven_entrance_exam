@@ -105,6 +105,21 @@
       Barbarian: { name: "Barbarian", hitDie: 12, primary: "STR" }
     };
 
+    const SPELL_CAPACITY = {
+      Bard:      { cantrips: 2, spells: 4 },
+      Cleric:    { cantrips: 3, spells: 4 }, 
+      Druid:     { cantrips: 2, spells: 4 }, 
+      Fighter:   { cantrips: 0, spells: 0 },
+      Monk:      { cantrips: 0, spells: 0 },
+      Paladin:   { cantrips: 0, spells: 0 },
+      Ranger:    { cantrips: 0, spells: 0 },
+      Rogue:     { cantrips: 0, spells: 0 },
+      Sorcerer:  { cantrips: 4, spells: 2 },
+      Warlock:   { cantrips: 2, spells: 2 },
+      Wizard:    { cantrips: 3, spells: 6 }, 
+      Barbarian: { cantrips: 0, spells: 0 }
+    };
+
     const CLUBS = {
       "Fine Artists":       { name: "Distinguished Society of Fine Artists" },
       "LARP Guild":         { name: "LARP Guild" },
@@ -117,6 +132,45 @@
       "Star Performer":      { name: "Star Performer Kit" },
       "Stealthy Archivist":  { name: "Stealthy Archivist Kit" },
       "Practical Survivalist":{ name: "Practical Survivalist Kit" }
+    };
+
+    const SPELLS_BY_RESONANCE = {
+      Destruction: [
+        { name: "Fire Bolt",       level: "Cantrip",   classes: ["Sorcerer","Wizard","Prismari"] },
+        { name: "Ray of Frost",    level: "Cantrip",   classes: ["Sorcerer","Wizard"] },
+        { name: "Vicious Mockery", level: "Cantrip",   classes: ["Bard","Silverquill"] },
+        { name: "Eldritch Blast",  level: "Cantrip",   classes: ["Warlock"] },
+        { name: "Sacred Flame",    level: "Cantrip",   classes: ["Cleric","Lorehold","Silverquill"] },
+        { name: "Magic Missile",   level: "1st-level", classes: ["Sorcerer","Wizard"] },
+        { name: "Burning Hands",   level: "1st-level", classes: ["Sorcerer","Wizard"] },
+        { name: "Chromatic Orb",   level: "1st-level", classes: ["Sorcerer","Wizard"] },
+        { name: "Guiding Bolt",    level: "1st-level", classes: ["Cleric"] },
+        { name: "Hellish Rebuke",  level: "1st-level", classes: ["Warlock"] }
+      ],
+      Control: [
+        { name: "Minor Illusion",  level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+        { name: "Blade Ward",      level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+        { name: "Thunderwave",     level: "1st-level", classes: ["Bard","Druid","Sorcerer","Wizard","Prismari"] },
+        { name: "Bane",            level: "1st-level", classes: ["Bard","Cleric","Warlock"] },
+        { name: "Hideous Laughter",level: "1st-level", classes: ["Bard","Wizard"] },
+        { name: "Faerie Fire",     level: "1st-level", classes: ["Bard","Druid"] },
+        { name: "Entangle",        level: "1st-level", classes: ["Druid","Quandrix"] },
+        { name: "Fog Cloud",       level: "1st-level", classes: ["Druid","Sorcerer","Wizard"] },
+        { name: "Charm Person",    level: "1st-level", classes: ["Bard","Druid","Sorcerer","Warlock","Wizard"] },
+        { name: "Color Spray",     level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] }
+      ],
+      Harmony: [
+        { name: "Guidance",        level: "Cantrip",   classes: ["Cleric","Druid","Quandrix","Witherbloom"] },
+        { name: "Resistance",      level: "Cantrip",   classes: ["Cleric","Druid"] },
+        { name: "Spare the Dying", level: "Cantrip",   classes: ["Cleric","Witherbloom"] },
+        { name: "Mending",         level: "Cantrip",   classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"] },
+        { name: "Cure Wounds",     level: "1st-level", classes: ["Bard","Cleric","Druid","Paladin","Ranger","Prismari","Witherbloom"] },
+        { name: "Healing Word",    level: "1st-level", classes: ["Bard","Cleric","Druid"] },
+        { name: "Bless",           level: "1st-level", classes: ["Cleric","Paladin"] },
+        { name: "Heroism",         level: "1st-level", classes: ["Bard","Paladin"] },
+        { name: "Shield",          level: "1st-level", classes: ["Sorcerer","Wizard","Prismari"] },
+        { name: "Detect Magic",    level: "1st-level", classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"] }
+      ]
     };
 
     function App() {
@@ -150,6 +204,10 @@
       const [resonanceType, setResonanceType] = useState(null);
       const [selectedSpells, setSelectedSpells] = useState([]);
       const [selectedSkills, setSelectedSkills] = useState([]);
+      
+      const [selectedTrait, setSelectedTrait] = useState("");
+      const [selectedIdeal, setSelectedIdeal] = useState("");
+      const [selectedBond, setSelectedBond] = useState("");
       const [alignment, setAlignment] = useState("Neutral Good");
       const [flaw, setFlaw] = useState("");
       const [characterName, setCharacterName] = useState("");
@@ -197,6 +255,9 @@
         if (data.resonanceType) setResonanceType(data.resonanceType);
         if (data.selectedSpells) setSelectedSpells(data.selectedSpells);
         if (data.selectedSkills) setSelectedSkills(data.selectedSkills);
+        if (data.selectedTrait) setSelectedTrait(data.selectedTrait);
+        if (data.selectedIdeal) setSelectedIdeal(data.selectedIdeal);
+        if (data.selectedBond) setSelectedBond(data.selectedBond);
         if (data.alignment) setAlignment(data.alignment);
         if (data.flaw) setFlaw(data.flaw);
         if (data.characterName) setCharacterName(data.characterName);
@@ -220,6 +281,9 @@
         if (updates.resonanceType != null) setResonanceType(updates.resonanceType);
         if (updates.selectedSpells != null) setSelectedSpells(updates.selectedSpells);
         if (updates.selectedSkills != null) setSelectedSkills(updates.selectedSkills);
+        if (updates.selectedTrait != null) setSelectedTrait(updates.selectedTrait);
+        if (updates.selectedIdeal != null) setSelectedIdeal(updates.selectedIdeal);
+        if (updates.selectedBond != null) setSelectedBond(updates.selectedBond);
         if (updates.alignment != null) setAlignment(updates.alignment);
         if (updates.flaw != null) setFlaw(updates.flaw);
         if (updates.characterName != null) setCharacterName(updates.characterName);
@@ -298,7 +362,7 @@
             portalPassword: portalPassword,
             phase, chatHistory, characterName, selectedLineage, selectedSize, selectedCollege, selectedClass,
             selectedClub, selectedStipend, selectedTool, selectedWeapon, selectedArmor, selectedLanguage, alignment, statAssignments, selectedSkills, 
-            selectedSpells, resonanceType, flaw, backstory, lastUpdated: new Date().toISOString()
+            selectedSpells, resonanceType, selectedTrait, selectedIdeal, selectedBond, flaw, backstory, lastUpdated: new Date().toISOString()
           }, { merge: true });
           
           if (!silent) alert("Student File successfully synced to the Strixhaven Cloud!");
@@ -350,8 +414,14 @@ Spellcasting Ability: ${getSpellAbility()}
 Spell Save DC: ${getSpellSaveDC()}
 Known Spells: ${selectedSpells.join(", ")}
 
---- PERSONALITY PROFILE ---
+--- PSYCHOLOGICAL PROFILE ---
+Trait: ${selectedTrait}
+Ideal: ${selectedIdeal}
+Bond: ${selectedBond}
 Flaw: ${flaw}
+
+--- OFFICIAL BACKGROUND FILE ---
+${backstory}
 `;
         const blob = new Blob([content.trim()], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
@@ -384,63 +454,6 @@ Flaw: ${flaw}
         setIsChatLoading(false);
       };
 
-      const renderChat = () => (
-        <>
-          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-            {chatHistory.map((msg, i) => (
-              <div key={i} className={`flex items-start ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'proctor' && (
-                  <div className="w-6 h-6 rounded-full bg-indigo-900 border border-indigo-500/40 flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
-                    <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
-                  </div>
-                )}
-                <div className={`max-w-[80%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
-                  msg.role === 'user'
-                    ? 'bg-amber-500/20 border border-amber-500/30 text-amber-100 rounded-tr-sm'
-                    : 'bg-indigo-950/60 border border-indigo-500/20 text-indigo-100 rounded-tl-sm'
-                }`}>
-                  {msg.role === 'proctor' && <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Proctor</span>}
-                  {msg.text}
-                </div>
-                {msg.role === 'user' && (
-                  <div className="w-6 h-6 rounded-full bg-amber-900 border border-amber-500/40 flex items-center justify-center ml-2 flex-shrink-0 mt-0.5">
-                    <i className="fa-solid fa-user-graduate text-amber-400 text-[8px]"></i>
-                  </div>
-                )}
-              </div>
-            ))}
-            {isChatLoading && (
-              <div className="flex items-start">
-                <div className="w-6 h-6 rounded-full bg-indigo-900 border border-indigo-500/40 flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
-                  <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
-                </div>
-                <div className="bg-indigo-950/60 border border-indigo-500/20 px-3 py-2 rounded-xl rounded-tl-sm text-xs text-indigo-300 italic">
-                  <i className="fa-solid fa-ellipsis fa-fade mr-1 text-indigo-400"></i>Proctor is writing...
-                </div>
-              </div>
-            )}
-            <div ref={chatEndRef} />
-          </div>
-          <div className="flex gap-2 mt-3 pt-3 border-t border-indigo-900/40 flex-shrink-0">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
-              placeholder="Speak to the Admissions Proctor..."
-              className="flex-1 bg-slate-950 border border-indigo-900/50 rounded-lg px-3 py-2 text-xs text-indigo-100 focus:border-indigo-500 outline-none placeholder:text-indigo-800"
-            />
-            <button
-              onClick={handleChatSubmit}
-              disabled={isChatLoading || !chatInput.trim()}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow transition-all whitespace-nowrap"
-            >
-              {isChatLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-paper-plane mr-1"></i>Send</>}
-            </button>
-          </div>
-        </>
-      );
-
       const renderSheet = () => {
         const cls = CLASSES[selectedClass] || {};
 
@@ -452,7 +465,6 @@ Flaw: ${flaw}
                 <p className="text-xs text-[#66543b] mt-0.5">{cls.name || "-"} 1 • {selectedCollege} • {selectedLineage} • {alignment}</p>
               </div>
 
-              {/* NEW: COMBAT STATS ROW VISIBLE ON UI */}
               <div className="grid grid-cols-4 gap-2 mb-2">
                 <div className="border-2 rounded-xl p-2 bg-red-900/10 text-center border-red-900/20">
                   <span className="text-[8px] font-bold text-red-900/70 uppercase">Max HP</span>
@@ -486,6 +498,7 @@ Flaw: ${flaw}
               </div>
             </div>
           );
+          
           case 2: return (
             <div className="space-y-4">
               <div>
@@ -505,6 +518,79 @@ Flaw: ${flaw}
               </div>
             </div>
           );
+
+          case 3: {
+            const baseCap = SPELL_CAPACITY[selectedClass] || { cantrips: 0, spells: 0 };
+            const expectedCantrips = baseCap.cantrips + 2; 
+            const expectedSpells = baseCap.spells + 1; 
+
+            const allSpells = Object.values(SPELLS_BY_RESONANCE).flat();
+            const cantrips = selectedSpells.filter(s => allSpells.find(x => x.name === s)?.level === "Cantrip");
+            const leveled = selectedSpells.filter(s => allSpells.find(x => x.name === s)?.level === "1st-level");
+            const unclassified = selectedSpells.filter(s => !allSpells.find(x => x.name === s));
+
+            const missingCantrips = Math.max(0, expectedCantrips - cantrips.length);
+            const missingSpells = Math.max(0, expectedSpells - leveled.length - unclassified.length);
+
+            const handleAddSpell = (e) => {
+              if (e.target.value && !selectedSpells.includes(e.target.value)) {
+                setSelectedSpells([...selectedSpells, e.target.value]);
+              }
+            };
+            const handleRemoveSpell = (s) => setSelectedSpells(selectedSpells.filter(x => x !== s));
+
+            const validSpellOptions = allSpells
+              .filter(s => !selectedSpells.includes(s.name))
+              .filter(s => s.classes.includes(selectedClass) || s.classes.includes(selectedCollege));
+
+            return (
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1">Grimoire & Spell Slots</h3>
+                
+                <div className="mb-4">
+                  <p className="text-xs font-bold text-slate-700 mb-2 flex justify-between">
+                    <span>Cantrips Known</span>
+                    <span className="text-slate-500">{cantrips.length} / {expectedCantrips}</span>
+                  </p>
+                  {cantrips.map(s => (
+                    <div key={s} className="flex justify-between items-center bg-white/80 p-1.5 rounded border border-[#2c2214]/10 mb-1 text-xs font-semibold">
+                      {s} <button onClick={() => handleRemoveSpell(s)} className="text-red-500 hover:text-red-700"><i className="fa-solid fa-times"></i></button>
+                    </div>
+                  ))}
+                  {Array.from({ length: missingCantrips }).map((_, i) => (
+                    <select key={`c-${i}`} onChange={handleAddSpell} value="" className="w-full bg-red-900/5 border border-red-900/20 text-red-900 rounded p-1.5 mb-1 text-xs outline-none cursor-pointer">
+                      <option value="" disabled>+ Empty Cantrip Slot...</option>
+                      {validSpellOptions.filter(s => s.level === "Cantrip").map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                    </select>
+                  ))}
+                </div>
+
+                <div>
+                  <p className="text-xs font-bold text-slate-700 mb-2 flex justify-between">
+                    <span>1st-Level Spells</span>
+                    <span className="text-slate-500">{leveled.length + unclassified.length} / {expectedSpells}</span>
+                  </p>
+                  {[...leveled, ...unclassified].map(s => (
+                    <div key={s} className="flex justify-between items-center bg-white/80 p-1.5 rounded border border-[#2c2214]/10 mb-1 text-xs font-semibold">
+                      {s} <button onClick={() => handleRemoveSpell(s)} className="text-red-500 hover:text-red-700"><i className="fa-solid fa-times"></i></button>
+                    </div>
+                  ))}
+                  {Array.from({ length: missingSpells }).map((_, i) => (
+                    <select key={`s-${i}`} onChange={handleAddSpell} value="" className="w-full bg-red-900/5 border border-red-900/20 text-red-900 rounded p-1.5 mb-1 text-xs outline-none cursor-pointer">
+                      <option value="" disabled>+ Empty 1st-Level Slot...</option>
+                      {validSpellOptions.filter(s => s.level === "1st-level").map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                    </select>
+                  ))}
+                </div>
+
+                <div className="text-[10px] text-slate-500 italic mt-3 bg-slate-900/5 p-2 rounded">
+                  <i className="fa-solid fa-circle-info mr-1 text-indigo-400"></i>
+                  Slot capacity includes Level 1 Class mechanics plus the +2 Cantrips and +1 Spell granted by the Strixhaven Initiate background feat.
+                </div>
+              </div>
+            );
+          }
+
           case 4: return (
             <div className="space-y-3 text-xs">
               <p className="font-bold text-amber-950 text-sm border-b border-[#2c2214] pb-1">Campus Life</p>
@@ -607,7 +693,7 @@ Flaw: ${flaw}
           </section>
 
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.4.0 - Backstory Engine
+            v1.5.0 - Backstory & Spellbook Fix
           </div>
 
         </div>
