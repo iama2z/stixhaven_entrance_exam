@@ -213,7 +213,11 @@
       const [characterName, setCharacterName] = useState("");
       const [backstory, setBackstory] = useState("");
 
-      const getScore  = (stat) => statAssignments[stat] ?? 10;
+      // SAFEGUARD: Ensure data structures never crash even if malformed from Firebase
+      const safeSpells = Array.isArray(selectedSpells) ? selectedSpells : [];
+      const safeSkills = Array.isArray(selectedSkills) ? selectedSkills : [];
+
+      const getScore  = (stat) => (statAssignments || {})[stat] ?? 10;
       const getMod    = (stat) => Math.floor((getScore(stat) - 10) / 2);
       const getModStr = (stat) => { const m = getMod(stat); return m >= 0 ? `+${m}` : `${m}`; };
       const getMaxHP = () => (CLASSES[selectedClass]?.hitDie || 8) + getMod("CON");
@@ -253,8 +257,11 @@
         if (data.selectedArmor) setSelectedArmor(data.selectedArmor);
         if (data.selectedLanguage) setSelectedLanguage(data.selectedLanguage);
         if (data.resonanceType) setResonanceType(data.resonanceType);
-        if (data.selectedSpells) setSelectedSpells(data.selectedSpells);
-        if (data.selectedSkills) setSelectedSkills(data.selectedSkills);
+        
+        // SAFEGUARD: Enforce arrays
+        if (data.selectedSpells) setSelectedSpells(Array.isArray(data.selectedSpells) ? data.selectedSpells : [data.selectedSpells]);
+        if (data.selectedSkills) setSelectedSkills(Array.isArray(data.selectedSkills) ? data.selectedSkills : [data.selectedSkills]);
+        
         if (data.selectedTrait) setSelectedTrait(data.selectedTrait);
         if (data.selectedIdeal) setSelectedIdeal(data.selectedIdeal);
         if (data.selectedBond) setSelectedBond(data.selectedBond);
@@ -279,8 +286,11 @@
         if (updates.selectedArmor != null) setSelectedArmor(updates.selectedArmor);
         if (updates.selectedLanguage != null) setSelectedLanguage(updates.selectedLanguage);
         if (updates.resonanceType != null) setResonanceType(updates.resonanceType);
-        if (updates.selectedSpells != null) setSelectedSpells(updates.selectedSpells);
-        if (updates.selectedSkills != null) setSelectedSkills(updates.selectedSkills);
+        
+        // SAFEGUARD: Enforce arrays
+        if (updates.selectedSpells != null) setSelectedSpells(Array.isArray(updates.selectedSpells) ? updates.selectedSpells : [updates.selectedSpells]);
+        if (updates.selectedSkills != null) setSelectedSkills(Array.isArray(updates.selectedSkills) ? updates.selectedSkills : [updates.selectedSkills]);
+        
         if (updates.selectedTrait != null) setSelectedTrait(updates.selectedTrait);
         if (updates.selectedIdeal != null) setSelectedIdeal(updates.selectedIdeal);
         if (updates.selectedBond != null) setSelectedBond(updates.selectedBond);
@@ -361,8 +371,8 @@
             portalUsername: cleanUsername,
             portalPassword: portalPassword,
             phase, chatHistory, characterName, selectedLineage, selectedSize, selectedCollege, selectedClass,
-            selectedClub, selectedStipend, selectedTool, selectedWeapon, selectedArmor, selectedLanguage, alignment, statAssignments, selectedSkills, 
-            selectedSpells, resonanceType, selectedTrait, selectedIdeal, selectedBond, flaw, backstory, lastUpdated: new Date().toISOString()
+            selectedClub, selectedStipend, selectedTool, selectedWeapon, selectedArmor, selectedLanguage, alignment, statAssignments, 
+            selectedSkills: safeSkills, selectedSpells: safeSpells, resonanceType, selectedTrait, selectedIdeal, selectedBond, flaw, backstory, lastUpdated: new Date().toISOString()
           }, { merge: true });
           
           if (!silent) alert("Student File successfully synced to the Strixhaven Cloud!");
@@ -404,7 +414,7 @@ CHA: ${getScore('CHA')} (${getModStr('CHA')})
 
 --- ACADEMICS & EXTRACURRICULARS ---
 Club: ${CLUBS[selectedClub]?.name || "None"}
-Skills: ${selectedSkills.join(", ")}
+Skills: ${safeSkills.join(", ")}
 Languages: Common, ${selectedLanguage}
 Tool Focus: ${selectedTool}
 Equipment: ${selectedWeapon}, ${STIPEND_KITS[selectedStipend]?.name}
@@ -412,7 +422,7 @@ Equipment: ${selectedWeapon}, ${STIPEND_KITS[selectedStipend]?.name}
 --- MAGIC & SPELLS ---
 Spellcasting Ability: ${getSpellAbility()}
 Spell Save DC: ${getSpellSaveDC()}
-Known Spells: ${selectedSpells.join(", ")}
+Known Spells: ${safeSpells.join(", ")}
 
 --- PSYCHOLOGICAL PROFILE ---
 Trait: ${selectedTrait}
@@ -455,7 +465,7 @@ ${backstory}
       };
 
       const renderSheet = () => {
-        const cls = CLASSES[selectedClass] || {};
+        const cls = CLASSES[selectedClass] || { name: "Student" };
 
         switch (activeSheetTab) {
           case 1: return (
@@ -486,7 +496,7 @@ ${backstory}
 
               <div className="grid grid-cols-3 gap-2">
                 {["STR","DEX","CON","INT","WIS","CHA"].map(stat => {
-                  const score = statAssignments[stat];
+                  const score = getScore(stat);
                   const mod = score !== null ? Math.floor((score - 10) / 2) : null;
                   return (
                     <div key={stat} className="border-2 rounded-xl p-2 bg-[#f9f5eb] text-center shadow-sm border-[#2c2214]">
@@ -524,23 +534,25 @@ ${backstory}
             const expectedCantrips = baseCap.cantrips + 2; 
             const expectedSpells = baseCap.spells + 1; 
 
-            const allSpells = Object.values(SPELLS_BY_RESONANCE).flat();
-            const cantrips = selectedSpells.filter(s => allSpells.find(x => x.name === s)?.level === "Cantrip");
-            const leveled = selectedSpells.filter(s => allSpells.find(x => x.name === s)?.level === "1st-level");
-            const unclassified = selectedSpells.filter(s => !allSpells.find(x => x.name === s));
+            // SAFEGUARD: Universally compatible flattening mechanism
+            const allSpells = Object.values(SPELLS_BY_RESONANCE).reduce((acc, val) => acc.concat(val), []);
+            
+            const cantrips = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "Cantrip");
+            const leveled = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "1st-level");
+            const unclassified = safeSpells.filter(s => !allSpells.find(x => x.name === s));
 
             const missingCantrips = Math.max(0, expectedCantrips - cantrips.length);
             const missingSpells = Math.max(0, expectedSpells - leveled.length - unclassified.length);
 
             const handleAddSpell = (e) => {
-              if (e.target.value && !selectedSpells.includes(e.target.value)) {
-                setSelectedSpells([...selectedSpells, e.target.value]);
+              if (e.target.value && !safeSpells.includes(e.target.value)) {
+                setSelectedSpells([...safeSpells, e.target.value]);
               }
             };
-            const handleRemoveSpell = (s) => setSelectedSpells(selectedSpells.filter(x => x !== s));
+            const handleRemoveSpell = (s) => setSelectedSpells(safeSpells.filter(x => x !== s));
 
             const validSpellOptions = allSpells
-              .filter(s => !selectedSpells.includes(s.name))
+              .filter(s => !safeSpells.includes(s.name))
               .filter(s => s.classes.includes(selectedClass) || s.classes.includes(selectedCollege));
 
             return (
@@ -693,7 +705,7 @@ ${backstory}
           </section>
 
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.5.0 - Backstory & Spellbook Fix
+            v1.5.1 - Data Safeguard Update
           </div>
 
         </div>
