@@ -486,11 +486,23 @@ Flaw: ${flaw}
               </div>
             </div>
           );
-          case 2: return <div className="text-xs font-serif leading-relaxed">{backstory || "No backstory recorded yet."}</div>;
-          case 3: return (
-            <div className="space-y-3">
-              <h3 className="text-sm font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1">Spellbook</h3>
-              {selectedSpells.length > 0 ? selectedSpells.map(s => <div key={s} className="bg-white/80 p-1.5 rounded border border-[#2c2214]/10 mb-1 text-xs font-semibold">{s}</div>) : <p className="text-xs italic opacity-50">No spells learned yet.</p>}
+          case 2: return (
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-sm font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1 mb-2">Psychological Profile</h3>
+                <div className="grid grid-cols-1 gap-2 text-xs">
+                  <p><span className="font-bold text-slate-700">Trait:</span> {selectedTrait || "TBD"}</p>
+                  <p><span className="font-bold text-slate-700">Ideal:</span> {selectedIdeal || "TBD"}</p>
+                  <p><span className="font-bold text-slate-700">Bond:</span> {selectedBond || "TBD"}</p>
+                  <p><span className="font-bold text-red-800">Flaw:</span> {flaw || "TBD"}</p>
+                </div>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold font-serif text-amber-900 border-b border-[#2c2214] pb-1 mb-2">Official Background File</h3>
+                <p className="text-xs font-serif leading-relaxed text-slate-800 bg-white/50 p-3 rounded-lg border border-[#2c2214]/10">
+                  {backstory || "No backstory recorded yet."}
+                </p>
+              </div>
             </div>
           );
           case 4: return (
@@ -595,7 +607,7 @@ Flaw: ${flaw}
           </section>
 
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.3.2 - UI Combat Stats
+            v1.4.0 - Backstory Engine
           </div>
 
         </div>

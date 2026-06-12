@@ -26,8 +26,13 @@ Phase 5: The Six-Step Core Attribute Exam - DO NOT ASK FOR NUMBERS DIRECTLY. Pre
 Phase 6: Specialized Tool Selection - "What is your primary method of focus?" A) Mechanical aids B) Traditional instruments C) Organic items
 Phase 7: Equipment & Armor - Ask TWO things: 1) "How do you prepare for the unknown?" (A: Travel light B: Prepare for everything C: Presentation). 2) "What type of armor do you rely on?" (Light Armor, Medium Armor, Heavy Armor, or Unarmored).
 Phase 8: The Arcane Tuning (Spells) - "What is your role on the battlefield?" A) Destruction B) Control C) Harmony
-Phase 9: Academic Aptitude & Languages - Ask TWO things: 1) "What do you want to be known for in class?" (A: Talking B: Secrets C: Heavy lifting). 2) "Which foreign language are you studying?" (Proctor Tip: Suggest Draconic for arcane scholars, Sylvan for Witherbloom nature lovers, Primordial for Prismari elementalists, or Dwarvish/Elvish for Lorehold historians).
-Phase 10: Disposition - "How do you handle pressure?" A) Challenge rules B) Support peers C) Own drum D) Pure knowledge
+Phase 9: Academic Aptitude & Languages - Ask TWO things: 1) "What do you want to be known for in class?" (A: Talking B: Secrets C: Heavy lifting). 2) "Which foreign language are you studying?" (Proctor Tip: Suggest Draconic for scholars, Sylvan for Witherbloom, Primordial for Prismari, or Dwarvish/Elvish for Lorehold).
+Phase 10: Psychological Evaluation (Backstory) - Present a 4-part "Personality Quiz" all at once:
+1) The Spark: "How did your magic first spectacularly (or disastrously) manifest?" (A: Intense emotion, B: Tinkering, C: Performance)
+2) The Anchor: "When exams get brutal, who do you write to?" (A: Demanding parent, B: Younger sibling, C: Former mentor)
+3) The Drive: "Why did you fight to get accepted here?" (A: Uncover secret, B: Prove them wrong, C: Master chaotic power)
+4) The Secret: "What do you hope your roommate doesn't notice?" (A: Fear of failure, B: Borrowing things, C: Oblivious to social cues)
+After they answer, generate a cohesive 3-sentence Backstory, and assign a specific Trait, Ideal, Bond, and Flaw based on their choices.
 Phase 11: Name - "What does your name say about your journey?" Provide a final summary.
 
 CRITICAL ARCHITECTURE INSTRUCTION:
@@ -51,71 +56,13 @@ Your JSON schema MUST look exactly like this template. Include ONLY the keys tha
     "resonanceType": "Harmony",
     "selectedSpells": ["Fire Bolt", "Cure Wounds"],
     "selectedSkills": ["Performance", "Acrobatics"],
+    "selectedTrait": "I express my deepest emotions through performance.",
+    "selectedIdeal": "Knowledge: Every experience is research material.",
+    "selectedBond": "A former mentor saw potential in me.",
     "alignment": "Chaotic Good",
-    "flaw": "I overcompensate for my physical weakness...",
-    "characterName": "Razor Toe"
+    "flaw": "I am terrified of failure.",
+    "characterName": "Razor Toe",
+    "backstory": "When I was young, my magic burst forth during a frantic musical performance..."
   }
 }
 `;
-
-exports.strixhavenConsultant = onCall(
-    {secrets: ["GEMINI_API_KEY"]},
-    async (request) => {
-      try {
-        const requestData = request.data || {};
-        const chatHistory = requestData.chatHistory || [];
-        const latestMessage = requestData.latestMessage || "Introduce yourself and begin Phase 1.";
-        const gameData = requestData.gameData || {};
-
-        // 1. Map frontend history to Gemini's expected schema
-        let historyForGemini = chatHistory.slice(0, -1).map(msg => ({
-          role: msg.role === 'proctor' ? 'model' : 'user',
-          parts: [{ text: msg.text }]
-        }));
-
-        // 2. CRITICAL FIX: Strip any leading 'model' messages so the history strictly starts with 'user'
-        while (historyForGemini.length > 0 && historyForGemini[0].role === 'model') {
-          historyForGemini.shift();
-        }
-
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const prompt = `[SYSTEM BACKGROUND DATA FOR CURRENT PHASE: ${JSON.stringify(gameData)}]\n\nSTUDENT SAYS: ${latestMessage}`;
-
-        // --- THE FALLBACK CASCADE ---
-        const fallbackChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
-        let responseText = null;
-        let lastError = null;
-
-        for (const modelName of fallbackChain) {
-          try {
-            const model = genAI.getGenerativeModel({
-              model: modelName,
-              systemInstruction: PROCTOR_INSTRUCTIONS,
-              generationConfig: { responseMimeType: "application/json" }
-            });
-            
-            const chat = model.startChat({ history: historyForGemini });
-            const result = await chat.sendMessage(prompt);
-            
-            responseText = result.response.text();
-            console.log(`Success! Biblioplex powered by: ${modelName}`);
-            break; 
-            
-          } catch (error) {
-            console.warn(`Traffic jam or error on ${modelName}, pivoting to next fallback...`);
-            lastError = error; 
-          }
-        }
-
-        if (!responseText) {
-          throw lastError; 
-        }
-
-        return JSON.parse(responseText);
-
-      } catch (error) {
-        console.error("Proctor Error:", error);
-        throw new HttpsError("internal", "The Biblioplex archives are currently unreachable.");
-      }
-    }
-);
