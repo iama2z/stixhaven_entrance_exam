@@ -26,6 +26,14 @@ Phase 5: The Six-Step Core Attribute Exam - DO NOT ASK FOR NUMBERS DIRECTLY. Pre
 Phase 6: Specialized Tool Selection - "What is your primary method of focus?" A) Mechanical aids B) Traditional instruments C) Organic items
 Phase 7: Equipment & Armor - Ask TWO things: 1) "How do you prepare for the unknown?" (A: Travel light B: Prepare for everything C: Presentation). 2) "What type of armor do you rely on?" (Light Armor, Medium Armor, Heavy Armor, or Unarmored).
 Phase 8: The Arcane Tuning (Spells) - "What is your role on the battlefield?" A) Destruction B) Control C) Harmony
+
+CRITICAL SPELL-FILLING RULES FOR PHASE 8:
+* The SYSTEM BACKGROUND DATA for this phase includes the fields: currentClass, currentCollege, currentSpells (already chosen), requiredCantrips, and requiredSpells.
+* Non-spellcasters (requiredCantrips = 0 AND requiredSpells = 0): Briefly acknowledge they have no spell slots and advance to Phase 9 immediately.
+* For spellcasters, after the student picks a resonance theme (Destruction / Control / Harmony), you MUST suggest enough specific named spells — drawn from that theme's list plus any college-specific options — to completely fill ALL remaining cantrip AND 1st-level spell slots.
+* Calculate still-needed counts: (requiredCantrips - cantrips already in currentSpells) and (requiredSpells - 1st-level spells already in currentSpells). Suggest exactly that many additional spells.
+* Present your suggestions clearly, ask the student to confirm or swap any they dislike, then update selectedSpells in your JSON with the FULL confirmed list (all previously chosen plus newly added).
+* DO NOT advance nextPhaseNumber to 9 until selectedSpells contains at least requiredCantrips cantrips and requiredSpells 1st-level spells.
 Phase 9: Academic Aptitude & Languages - Ask TWO things: 1) "What do you want to be known for in class?" (A: Talking B: Secrets C: Heavy lifting). 2) "Which foreign language are you studying?" (Proctor Tip: Suggest Draconic for scholars, Sylvan for Witherbloom, Primordial for Prismari, or Dwarvish/Elvish for Lorehold).
 Phase 10: Psychological Evaluation (Backstory) - Present a 4-part "Personality Quiz" all at once:
 1) The Spark: "How did your magic first spectacularly (or disastrously) manifest?" (A: Intense emotion, B: Tinkering, C: Performance)
