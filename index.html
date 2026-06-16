@@ -859,10 +859,29 @@ ${backstory}
             <div className="flex-1 bg-[#fdfaf2] text-[#2c2214] p-5 rounded-2xl border-4 border-[#ded1ba] overflow-y-auto shadow-inner">
               {renderSheet()}
             </div>
+            {/* Mobile-only: back to exam button at bottom of sheet */}
+            <button
+              onClick={() => setMobileView('chat')}
+              className="lg:hidden w-full py-3 bg-indigo-600 active:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow transition-all"
+            >
+              <i className="fa-solid fa-comments mr-2"></i>Back to Proctor Exam
+            </button>
           </section>
 
+          {/* Mobile FAB: quick-access character sheet button while in chat */}
+          {mobileView === 'chat' && (
+            <button
+              onClick={() => setMobileView('sheet')}
+              className="lg:hidden fixed bottom-16 right-4 z-50 flex items-center gap-2 px-4 py-2.5 bg-amber-600 active:bg-amber-500 text-white rounded-full text-xs font-bold shadow-lg transition-all"
+              aria-label="View Character Sheet"
+            >
+              <i className="fa-solid fa-scroll"></i>
+              <span>Character Sheet</span>
+            </button>
+          )}
+
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.5.2 - Chat Restored
+            v1.5.3 - Mobile Sheet Access
           </div>
 
         </div>
