@@ -2,6 +2,7 @@
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {initializeApp} = require("firebase-admin/app");
 const {GoogleGenerativeAI} = require("@google/generative-ai");
+const spellsData = require("./data/spells.json");
 
 initializeApp();
 
@@ -28,12 +29,17 @@ Phase 7: Equipment & Armor - Ask TWO things: 1) "How do you prepare for the unkn
 Phase 8: The Arcane Tuning (Spells) - "What is your role on the battlefield?" A) Destruction B) Control C) Harmony
 
 CRITICAL SPELL-FILLING RULES FOR PHASE 8:
-* The SYSTEM BACKGROUND DATA for this phase includes the fields: currentClass, currentCollege, currentSpells (already chosen), requiredCantrips, and requiredSpells.
+* The SYSTEM BACKGROUND DATA for this phase includes: currentClass, currentCollege, currentSpells (already chosen), requiredCantrips, requiredSpells, and extendedSpellList (an object with "cantrips" and "firstLevel" arrays listing ALL spells eligible for this character from the full spell database).
 * Non-spellcasters (requiredCantrips = 0 AND requiredSpells = 0): Briefly acknowledge they have no spell slots and advance to Phase 9 immediately.
-* For spellcasters, after the student picks a resonance theme (Destruction / Control / Harmony), you MUST suggest enough specific named spells — drawn from that theme's list plus any college-specific options — to completely fill ALL remaining cantrip AND 1st-level spell slots.
-* Calculate still-needed counts: (requiredCantrips - cantrips already in currentSpells) and (requiredSpells - 1st-level spells already in currentSpells). Suggest exactly that many additional spells.
-* Present your suggestions clearly, ask the student to confirm or swap any they dislike, then update selectedSpells in your JSON with the FULL confirmed list (all previously chosen plus newly added).
-* DO NOT advance nextPhaseNumber to 9 until selectedSpells contains at least requiredCantrips cantrips and requiredSpells 1st-level spells.
+* For spellcasters, after the student picks a resonance theme (Destruction / Control / Harmony):
+  1. Calculate remaining needed: (requiredCantrips - count of cantrips in currentSpells) cantrips and (requiredSpells - count of 1st-level spells in currentSpells) 1st-level spells.
+  2. Draw from the chosen resonance theme first, then fill remaining slots from extendedSpellList to ensure you always have enough options.
+  3. Suggest AT LEAST double the needed count as selectable options for each category (cantrips and 1st-level spells separately), so the student has real, meaningful choices — never offer fewer options than slots to fill.
+  4. ALWAYS propose enough specific named spells to fill ALL remaining empty slots in one message. Never leave the student with fewer suggestions than open slots.
+  5. Present cantrip options and 1st-level spell options in clearly labelled separate lists.
+  6. Ask the student to confirm or swap any they dislike, then update selectedSpells in your JSON with the FULL confirmed list (all previously chosen plus newly added).
+  7. DO NOT advance nextPhaseNumber to 9 until selectedSpells contains at least requiredCantrips cantrips AND requiredSpells 1st-level spells.
+  8. If after a confirmation step selectedSpells still has empty slots, PROACTIVELY offer additional options from extendedSpellList WITHOUT waiting to be asked.
 Phase 9: Academic Aptitude & Languages - Ask TWO things: 1) "What do you want to be known for in class?" (A: Talking B: Secrets C: Heavy lifting). 2) "Which foreign language are you studying?" (Proctor Tip: Suggest Draconic for scholars, Sylvan for Witherbloom, Primordial for Prismari, or Dwarvish/Elvish for Lorehold).
 Phase 10: Psychological Evaluation (Backstory) - Present a 4-part "Personality Quiz" all at once:
 1) The Spark: "How did your magic first spectacularly (or disastrously) manifest?" (A: Intense emotion, B: Tinkering, C: Performance)
@@ -85,6 +91,21 @@ exports.strixhavenConsultant = onCall(
         const latestMessage = requestData.latestMessage || "Introduce yourself and begin Phase 1.";
         const gameData = requestData.gameData || {};
 
+        // Build a class- and college-filtered spell list from the full database
+        const currentClass = gameData.currentClass || "";
+        const currentCollege = gameData.currentCollege || "";
+        const extendedSpellList = {
+          cantrips: Object.entries(spellsData)
+            .filter(([, s]) => s.level === "Cantrip" &&
+              (s.classes.includes(currentClass) || (currentCollege && s.classes.includes(currentCollege))))
+            .map(([name]) => name),
+          firstLevel: Object.entries(spellsData)
+            .filter(([, s]) => s.level === "1st-level" &&
+              (s.classes.includes(currentClass) || (currentCollege && s.classes.includes(currentCollege))))
+            .map(([name]) => name),
+        };
+        const enrichedGameData = { ...gameData, extendedSpellList };
+
         let historyForGemini = chatHistory.slice(0, -1)
           .filter(msg => msg && typeof msg.role === 'string' && typeof msg.text === 'string')
           .map(msg => ({
@@ -97,7 +118,7 @@ exports.strixhavenConsultant = onCall(
         }
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const prompt = `[SYSTEM BACKGROUND DATA FOR CURRENT PHASE: ${JSON.stringify(gameData)}]\n\nSTUDENT SAYS: ${latestMessage}`;
+        const prompt = `[SYSTEM BACKGROUND DATA FOR CURRENT PHASE: ${JSON.stringify(enrichedGameData)}]\n\nSTUDENT SAYS: ${latestMessage}`;
 
         const fallbackChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
         let responseText = null;
