@@ -228,6 +228,7 @@
       const [isAuthLoading, setIsAuthLoading] = useState(false);
 
       const [phase, setPhase] = useState(1);
+      const [mobileView, setMobileView] = useState('chat');
       const [activeSheetTab, setActiveSheetTab] = useState(1);
       const [isSaving, setIsSaving] = useState(false);
       const [chatHistory, setChatHistory] = useState([]);
@@ -292,7 +293,8 @@
           currentSpells: safeSpells,
           spellCapacity: SPELL_CAPACITY,
           requiredCantrips: baseCap.cantrips + (isSpellcaster ? 2 : 0),
-          requiredSpells: baseCap.spells + (isSpellcaster ? 1 : 0)
+          requiredSpells: baseCap.spells + (isSpellcaster ? 1 : 0),
+          spellsByResonance: SPELLS_BY_RESONANCE
         };
       };
 
@@ -795,7 +797,23 @@ ${backstory}
 
       return (
         <div className="flex flex-col lg:flex-row h-screen relative">
-          <section className="w-full lg:w-1/2 border-r border-slate-800 flex flex-col bg-slate-900/40 overflow-hidden">
+          {/* Mobile-only tab bar to switch between Proctor Chat and Character Sheet */}
+          <div className="flex lg:hidden flex-shrink-0 border-b border-slate-800 bg-slate-900">
+            <button
+              onClick={() => setMobileView('chat')}
+              className={`flex-1 py-3 text-xs font-semibold transition-all ${mobileView === 'chat' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              <i className="fa-solid fa-comments mr-2"></i>Proctor Exam
+            </button>
+            <button
+              onClick={() => setMobileView('sheet')}
+              className={`flex-1 py-3 text-xs font-semibold transition-all ${mobileView === 'sheet' ? 'bg-amber-600 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
+            >
+              <i className="fa-solid fa-scroll mr-2"></i>Character Sheet
+            </button>
+          </div>
+
+          <section className={`${mobileView === 'chat' ? 'flex' : 'hidden'} lg:flex flex-col flex-1 lg:flex-none lg:w-1/2 border-r border-slate-800 bg-slate-900/40 overflow-hidden`}>
             <div className="px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
               <header className="mb-4 border-b border-amber-500/30 pb-4 flex justify-between items-start">
                 <div>
@@ -830,7 +848,7 @@ ${backstory}
             </div>
           </section>
 
-          <section className="w-full lg:w-1/2 p-4 md:p-6 bg-slate-800/30 flex flex-col gap-3 overflow-y-auto">
+          <section className={`${mobileView === 'sheet' ? 'flex' : 'hidden'} lg:flex flex-col flex-1 lg:flex-none lg:w-1/2 p-4 md:p-6 bg-slate-800/30 gap-3 overflow-y-auto`}>
             <div className="flex gap-2 border-b border-slate-800 pb-3">
               {[{ id: 1, label: "Core Stats" }, { id: 2, label: "Backstory" }, { id: 3, label: "Spellbook" }, { id: 4, label: "Campus" }].map(tab => (
                 <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-800 hover:border-amber-500/40"}`}>
