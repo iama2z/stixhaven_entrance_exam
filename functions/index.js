@@ -120,7 +120,7 @@ exports.strixhavenConsultant = onCall(
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const prompt = `[SYSTEM BACKGROUND DATA FOR CURRENT PHASE: ${JSON.stringify(enrichedGameData)}]\n\nSTUDENT SAYS: ${latestMessage}`;
 
-        const fallbackChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
+        const fallbackChain = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
         let responseText = null;
         let lastError = null;
 
