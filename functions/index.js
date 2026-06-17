@@ -152,7 +152,7 @@ exports.strixhavenConsultant = onCall(
         // Strip markdown code fences that some models emit despite responseMimeType: "application/json"
         let cleanResponse = responseText.trim();
         if (cleanResponse.startsWith("```")) {
-          cleanResponse = cleanResponse.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+          cleanResponse = cleanResponse.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "").trim();
         }
         return JSON.parse(cleanResponse);
 
