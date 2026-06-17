@@ -173,6 +173,61 @@
       ]
     };
 
+    // Spells available via extendedSpellList (from the AI backend) that are not in SPELLS_BY_RESONANCE.
+    // Keeping this in sync with functions/data/spells.json ensures the Spellbook tab can correctly
+    // classify any spell the AI recommends, regardless of resonance theme.
+    const EXTENDED_SPELL_DATA = [
+      { name: "Acid Splash",    level: "Cantrip",   classes: ["Sorcerer","Wizard"] },
+      { name: "Chill Touch",    level: "Cantrip",   classes: ["Sorcerer","Warlock","Wizard"] },
+      { name: "Dancing Lights", level: "Cantrip",   classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Druidcraft",     level: "Cantrip",   classes: ["Druid"] },
+      { name: "Light",          level: "Cantrip",   classes: ["Bard","Cleric","Sorcerer","Wizard"] },
+      { name: "Mage Hand",      level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+      { name: "Message",        level: "Cantrip",   classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Poison Spray",   level: "Cantrip",   classes: ["Druid","Sorcerer","Warlock","Wizard"] },
+      { name: "Prestidigitation", level: "Cantrip", classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+      { name: "Produce Flame",  level: "Cantrip",   classes: ["Druid"] },
+      { name: "Shillelagh",     level: "Cantrip",   classes: ["Druid"] },
+      { name: "Shocking Grasp", level: "Cantrip",   classes: ["Sorcerer","Wizard"] },
+      { name: "Thaumaturgy",    level: "Cantrip",   classes: ["Cleric"] },
+      { name: "True Strike",    level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+      { name: "Alarm",          level: "1st-level", classes: ["Ranger","Wizard"] },
+      { name: "Animal Friendship", level: "1st-level", classes: ["Bard","Druid","Ranger"] },
+      { name: "Armor of Agathys", level: "1st-level", classes: ["Warlock"] },
+      { name: "Arms of Hadar",  level: "1st-level", classes: ["Warlock"] },
+      { name: "Command",        level: "1st-level", classes: ["Bard","Cleric","Paladin"] },
+      { name: "Compelled Duel", level: "1st-level", classes: ["Paladin"] },
+      { name: "Comprehend Languages", level: "1st-level", classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+      { name: "Create or Destroy Water", level: "1st-level", classes: ["Cleric","Druid"] },
+      { name: "Detect Evil and Good", level: "1st-level", classes: ["Cleric","Paladin"] },
+      { name: "Detect Poison and Disease", level: "1st-level", classes: ["Cleric","Druid","Paladin","Ranger"] },
+      { name: "Disguise Self",  level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Divine Favor",   level: "1st-level", classes: ["Paladin"] },
+      { name: "Expeditious Retreat", level: "1st-level", classes: ["Sorcerer","Warlock","Wizard"] },
+      { name: "False Life",     level: "1st-level", classes: ["Sorcerer","Wizard"] },
+      { name: "Feather Fall",   level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Find Familiar",  level: "1st-level", classes: ["Wizard"] },
+      { name: "Floating Disk",  level: "1st-level", classes: ["Wizard"] },
+      { name: "Goodberry",      level: "1st-level", classes: ["Druid","Ranger"] },
+      { name: "Grease",         level: "1st-level", classes: ["Wizard"] },
+      { name: "Hunter's Mark",  level: "1st-level", classes: ["Ranger"] },
+      { name: "Identify",       level: "1st-level", classes: ["Bard","Wizard"] },
+      { name: "Illusory Script", level: "1st-level", classes: ["Bard","Warlock","Wizard"] },
+      { name: "Inflict Wounds", level: "1st-level", classes: ["Cleric"] },
+      { name: "Jump",           level: "1st-level", classes: ["Druid","Ranger","Sorcerer","Wizard"] },
+      { name: "Longstrider",    level: "1st-level", classes: ["Bard","Druid","Ranger","Wizard"] },
+      { name: "Mage Armor",     level: "1st-level", classes: ["Sorcerer","Wizard"] },
+      { name: "Protection from Evil and Good", level: "1st-level", classes: ["Cleric","Paladin","Warlock","Wizard"] },
+      { name: "Purify Food and Drink", level: "1st-level", classes: ["Cleric","Druid","Paladin"] },
+      { name: "Sanctuary",      level: "1st-level", classes: ["Cleric"] },
+      { name: "Shield of Faith", level: "1st-level", classes: ["Cleric","Paladin"] },
+      { name: "Silent Image",   level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Silvery Barbs",  level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Sleep",          level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Speak with Animals", level: "1st-level", classes: ["Bard","Druid","Ranger"] },
+      { name: "Unseen Servant", level: "1st-level", classes: ["Bard","Warlock","Wizard"] },
+    ];
+
     const sanitizeSystemUpdates = (updates) => {
       if (!updates || typeof updates !== 'object' || Array.isArray(updates)) return null;
       const s = { ...updates };
@@ -662,7 +717,10 @@ ${backstory}
             const expectedCantrips = baseCap.cantrips + (isSpellcaster ? 2 : 0);
             const expectedSpells = baseCap.spells + (isSpellcaster ? 1 : 0);
 
-            const allSpells = Object.values(SPELLS_BY_RESONANCE).reduce((acc, val) => acc.concat(val), []);
+            const allSpells = [
+              ...Object.values(SPELLS_BY_RESONANCE).reduce((acc, val) => acc.concat(val), []),
+              ...EXTENDED_SPELL_DATA
+            ];
             
             const cantrips = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "Cantrip");
             const leveled = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "1st-level");
