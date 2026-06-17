@@ -173,107 +173,6 @@
       ]
     };
 
-    // Spells available via extendedSpellList (from the AI backend) that are not in SPELLS_BY_RESONANCE.
-    // Keeping this in sync with functions/data/spells.json ensures the Spellbook tab can correctly
-    // classify any spell the AI recommends, regardless of resonance theme.
-    const EXTENDED_SPELL_DATA = [
-      { name: "Acid Splash",    level: "Cantrip",   classes: ["Sorcerer","Wizard"] },
-      { name: "Chill Touch",    level: "Cantrip",   classes: ["Sorcerer","Warlock","Wizard"] },
-      { name: "Dancing Lights", level: "Cantrip",   classes: ["Bard","Sorcerer","Wizard"] },
-      { name: "Druidcraft",     level: "Cantrip",   classes: ["Druid"] },
-      { name: "Light",          level: "Cantrip",   classes: ["Bard","Cleric","Sorcerer","Wizard"] },
-      { name: "Mage Hand",      level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
-      { name: "Message",        level: "Cantrip",   classes: ["Bard","Sorcerer","Wizard"] },
-      { name: "Poison Spray",   level: "Cantrip",   classes: ["Druid","Sorcerer","Warlock","Wizard"] },
-      { name: "Prestidigitation", level: "Cantrip", classes: ["Bard","Sorcerer","Warlock","Wizard"] },
-      { name: "Produce Flame",  level: "Cantrip",   classes: ["Druid"] },
-      { name: "Shillelagh",     level: "Cantrip",   classes: ["Druid"] },
-      { name: "Shocking Grasp", level: "Cantrip",   classes: ["Sorcerer","Wizard"] },
-      { name: "Thaumaturgy",    level: "Cantrip",   classes: ["Cleric"] },
-      { name: "True Strike",    level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
-      { name: "Alarm",          level: "1st-level", classes: ["Ranger","Wizard"] },
-      { name: "Animal Friendship", level: "1st-level", classes: ["Bard","Druid","Ranger"] },
-      { name: "Armor of Agathys", level: "1st-level", classes: ["Warlock"] },
-      { name: "Arms of Hadar",  level: "1st-level", classes: ["Warlock"] },
-      { name: "Command",        level: "1st-level", classes: ["Bard","Cleric","Paladin"] },
-      { name: "Compelled Duel", level: "1st-level", classes: ["Paladin"] },
-      { name: "Comprehend Languages", level: "1st-level", classes: ["Bard","Sorcerer","Warlock","Wizard"] },
-      { name: "Create or Destroy Water", level: "1st-level", classes: ["Cleric","Druid"] },
-      { name: "Detect Evil and Good", level: "1st-level", classes: ["Cleric","Paladin"] },
-      { name: "Detect Poison and Disease", level: "1st-level", classes: ["Cleric","Druid","Paladin","Ranger"] },
-      { name: "Disguise Self",  level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
-      { name: "Divine Favor",   level: "1st-level", classes: ["Paladin"] },
-      { name: "Expeditious Retreat", level: "1st-level", classes: ["Sorcerer","Warlock","Wizard"] },
-      { name: "False Life",     level: "1st-level", classes: ["Sorcerer","Wizard"] },
-      { name: "Feather Fall",   level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
-      { name: "Find Familiar",  level: "1st-level", classes: ["Wizard"] },
-      { name: "Floating Disk",  level: "1st-level", classes: ["Wizard"] },
-      { name: "Goodberry",      level: "1st-level", classes: ["Druid","Ranger"] },
-      { name: "Grease",         level: "1st-level", classes: ["Wizard"] },
-      { name: "Hunter's Mark",  level: "1st-level", classes: ["Ranger"] },
-      { name: "Identify",       level: "1st-level", classes: ["Bard","Wizard"] },
-      { name: "Illusory Script", level: "1st-level", classes: ["Bard","Warlock","Wizard"] },
-      { name: "Inflict Wounds", level: "1st-level", classes: ["Cleric"] },
-      { name: "Jump",           level: "1st-level", classes: ["Druid","Ranger","Sorcerer","Wizard"] },
-      { name: "Longstrider",    level: "1st-level", classes: ["Bard","Druid","Ranger","Wizard"] },
-      { name: "Mage Armor",     level: "1st-level", classes: ["Sorcerer","Wizard"] },
-      { name: "Protection from Evil and Good", level: "1st-level", classes: ["Cleric","Paladin","Warlock","Wizard"] },
-      { name: "Purify Food and Drink", level: "1st-level", classes: ["Cleric","Druid","Paladin"] },
-      { name: "Sanctuary",      level: "1st-level", classes: ["Cleric"] },
-      { name: "Shield of Faith", level: "1st-level", classes: ["Cleric","Paladin"] },
-      { name: "Silent Image",   level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
-      { name: "Silvery Barbs",  level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
-      { name: "Sleep",          level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
-      { name: "Speak with Animals", level: "1st-level", classes: ["Bard","Druid","Ranger"] },
-      { name: "Unseen Servant", level: "1st-level", classes: ["Bard","Warlock","Wizard"] },
-    ];
-
-    const sanitizeSystemUpdates = (updates) => {
-      if (!updates || typeof updates !== 'object' || Array.isArray(updates)) return null;
-      const s = { ...updates };
-
-      // nextPhaseNumber must be a real integer
-      if ('nextPhaseNumber' in s) {
-        const n = parseInt(s.nextPhaseNumber, 10);
-        if (isNaN(n)) delete s.nextPhaseNumber; else s.nextPhaseNumber = n;
-      }
-
-      // statAssignments values must be numbers; drop any key whose value can't be parsed
-      if (s.statAssignments && typeof s.statAssignments === 'object' && !Array.isArray(s.statAssignments)) {
-        const clean = {};
-        for (const [k, v] of Object.entries(s.statAssignments)) {
-          const n = parseInt(v, 10);
-          if (!isNaN(n)) clean[k] = n;
-        }
-        s.statAssignments = clean;
-      } else if ('statAssignments' in s) {
-        delete s.statAssignments;
-      }
-
-      // spell/skill arrays must be arrays of plain strings
-      for (const key of ['selectedSpells', 'selectedSkills']) {
-        if (key in s) {
-          if (!Array.isArray(s[key])) {
-            s[key] = typeof s[key] === 'string' ? [s[key]] : [];
-          }
-          s[key] = s[key].filter(x => typeof x === 'string');
-        }
-      }
-
-      // all remaining string fields must actually be strings
-      const stringFields = [
-        'selectedLineage','selectedSize','selectedClass','selectedCollege','selectedClub',
-        'selectedTool','selectedStipend','selectedWeapon','selectedArmor','selectedLanguage',
-        'resonanceType','selectedTrait','selectedIdeal','selectedBond','alignment','flaw',
-        'characterName','backstory'
-      ];
-      for (const field of stringFields) {
-        if (field in s && typeof s[field] !== 'string') delete s[field];
-      }
-
-      return s;
-    };
-
     function App() {
       const [isAuthenticated, setIsAuthenticated] = useState(false);
       const [loginMode, setLoginMode] = useState('new'); 
@@ -283,7 +182,6 @@
       const [isAuthLoading, setIsAuthLoading] = useState(false);
 
       const [phase, setPhase] = useState(1);
-      const [mobileView, setMobileView] = useState('chat');
       const [activeSheetTab, setActiveSheetTab] = useState(1);
       const [isSaving, setIsSaving] = useState(false);
       const [chatHistory, setChatHistory] = useState([]);
@@ -291,7 +189,6 @@
       const [isChatLoading, setIsChatLoading] = useState(false);
       const chatEndRef = useRef(null);
       const hasInitialized = useRef(false);
-      const prevLoadingRef = useRef(false);
 
       const [selectedLineage, setSelectedLineage] = useState("Human");
       const [selectedSize, setSelectedSize] = useState("Medium");
@@ -316,7 +213,6 @@
       const [characterName, setCharacterName] = useState("");
       const [backstory, setBackstory] = useState("");
 
-      // SAFEGUARD
       const safeSpells = Array.isArray(selectedSpells) ? selectedSpells : [];
       const safeSkills = Array.isArray(selectedSkills) ? selectedSkills : [];
 
@@ -336,31 +232,18 @@
       };
 
       const getGameDataForPhase = (phaseNum) => {
-        const baseCap = SPELL_CAPACITY[selectedClass] || { cantrips: 0, spells: 0 };
-        const isSpellcaster = baseCap.cantrips > 0 || baseCap.spells > 0;
         return { 
           lineages: LINEAGES, 
           classes: CLASSES, 
           colleges: COLLEGES, 
           clubs: CLUBS, 
-          currentClass: selectedClass,
-          currentCollege: selectedCollege,
-          currentSpells: safeSpells,
-          spellCapacity: SPELL_CAPACITY,
-          requiredCantrips: baseCap.cantrips + (isSpellcaster ? 2 : 0),
-          requiredSpells: baseCap.spells + (isSpellcaster ? 1 : 0),
-          spellsByResonance: SPELLS_BY_RESONANCE
+          currentClass: selectedClass 
         };
       };
 
       const loadStudentData = (data) => {
         if (data.phase) setPhase(data.phase);
-        if (data.chatHistory) {
-          const safeHistory = Array.isArray(data.chatHistory)
-            ? data.chatHistory.filter(m => m && typeof m.role === 'string' && typeof m.text === 'string')
-            : [];
-          setChatHistory(safeHistory);
-        }
+        if (data.chatHistory) setChatHistory(data.chatHistory);
         if (data.selectedLineage) setSelectedLineage(data.selectedLineage);
         if (data.selectedSize) setSelectedSize(data.selectedSize);
         if (data.selectedClass) setSelectedClass(data.selectedClass);
@@ -418,18 +301,6 @@
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, [chatHistory, isChatLoading]);
 
-      // Auto-save fires after a full chat turn completes (isChatLoading: true → false),
-      // ensuring all state updates from applySystemUpdates have already been committed.
-      // submitToFirebase is intentionally omitted from deps: it is re-created every render
-      // and adding it would cause the effect to fire on every render, not just on loading transitions.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      useEffect(() => {
-        if (prevLoadingRef.current && !isChatLoading && isAuthenticated && chatHistory.length > 0) {
-          submitToFirebase(true);
-        }
-        prevLoadingRef.current = isChatLoading;
-      }, [isChatLoading]);
-
       const handleLogin = async (e) => {
         e.preventDefault();
         setAuthError('');
@@ -476,7 +347,7 @@
             const response = await window.askAdmissionsAI([], initPrompt, getGameDataForPhase(1));
             const proctorMsg = response.proctorMessage || response.response || "Welcome to the Strixhaven Biblioplex.";
             setChatHistory([{ role: 'proctor', text: proctorMsg }]);
-            if (response.systemUpdates) applySystemUpdates(sanitizeSystemUpdates(response.systemUpdates));
+            if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
           } catch (err) {
             setChatHistory([{ role: 'proctor', text: 'Welcome. I am your Admissions Proctor. How do you perceive your place in the multiverse? A) Physical Pioneer B) Intellectual Observer C) Social Conduit D) Resilient Survivor' }]);
           }
@@ -577,18 +448,19 @@ ${backstory}
         setChatHistory(newHistory);
         setIsChatLoading(true);
 
+        submitToFirebase(true);
+
         try {
           const response = await window.askAdmissionsAI(newHistory, userMsg, getGameDataForPhase(phase));
           const proctorMsg = response.proctorMessage || response.response || 'The Proctor nods thoughtfully...';
           setChatHistory(prev => [...prev, { role: 'proctor', text: proctorMsg }]);
-          if (response.systemUpdates) applySystemUpdates(sanitizeSystemUpdates(response.systemUpdates));
+          if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
         } catch {
           setChatHistory(prev => [...prev, { role: 'proctor', text: 'The Biblioplex archives are currently unreachable. Please try again later.' }]);
         }
         setIsChatLoading(false);
       };
 
-      // RESTORED RENDER CHAT FUNCTION
       const renderChat = () => (
         <>
           <div className="flex-1 overflow-y-auto space-y-3 pr-1">
@@ -717,10 +589,7 @@ ${backstory}
             const expectedCantrips = baseCap.cantrips + (isSpellcaster ? 2 : 0);
             const expectedSpells = baseCap.spells + (isSpellcaster ? 1 : 0);
 
-            const allSpells = [
-              ...Object.values(SPELLS_BY_RESONANCE).reduce((acc, val) => acc.concat(val), []),
-              ...EXTENDED_SPELL_DATA
-            ];
+            const allSpells = Object.values(SPELLS_BY_RESONANCE).reduce((acc, val) => acc.concat(val), []);
             
             const cantrips = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "Cantrip");
             const leveled = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "1st-level");
@@ -756,6 +625,7 @@ ${backstory}
                     </span>
                   </div>
                 )}
+
                 <div className="mb-4">
                   <p className="text-xs font-bold text-slate-700 mb-2 flex justify-between">
                     <span>Cantrips Known</span>
@@ -855,23 +725,7 @@ ${backstory}
 
       return (
         <div className="flex flex-col lg:flex-row h-screen relative">
-          {/* Mobile-only tab bar to switch between Proctor Chat and Character Sheet */}
-          <div className="flex lg:hidden flex-shrink-0 border-b border-slate-800 bg-slate-900">
-            <button
-              onClick={() => setMobileView('chat')}
-              className={`flex-1 py-3 text-xs font-semibold transition-all ${mobileView === 'chat' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              <i className="fa-solid fa-comments mr-2"></i>Proctor Exam
-            </button>
-            <button
-              onClick={() => setMobileView('sheet')}
-              className={`flex-1 py-3 text-xs font-semibold transition-all ${mobileView === 'sheet' ? 'bg-amber-600 text-slate-950' : 'text-slate-400 hover:text-slate-200'}`}
-            >
-              <i className="fa-solid fa-scroll mr-2"></i>Character Sheet
-            </button>
-          </div>
-
-          <section className={`${mobileView === 'chat' ? 'flex' : 'hidden'} lg:flex flex-col flex-1 lg:flex-none lg:w-1/2 border-r border-slate-800 bg-slate-900/40 overflow-hidden`}>
+          <section className="w-full lg:w-1/2 border-r border-slate-800 flex flex-col bg-slate-900/40 overflow-hidden">
             <div className="px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
               <header className="mb-4 border-b border-amber-500/30 pb-4 flex justify-between items-start">
                 <div>
@@ -906,7 +760,7 @@ ${backstory}
             </div>
           </section>
 
-          <section className={`${mobileView === 'sheet' ? 'flex' : 'hidden'} lg:flex flex-col flex-1 lg:flex-none lg:w-1/2 p-4 md:p-6 bg-slate-800/30 gap-3 overflow-y-auto`}>
+          <section className="w-full lg:w-1/2 p-4 md:p-6 bg-slate-800/30 flex flex-col gap-3 overflow-y-auto">
             <div className="flex gap-2 border-b border-slate-800 pb-3">
               {[{ id: 1, label: "Core Stats" }, { id: 2, label: "Backstory" }, { id: 3, label: "Spellbook" }, { id: 4, label: "Campus" }].map(tab => (
                 <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-800 hover:border-amber-500/40"}`}>
@@ -917,29 +771,10 @@ ${backstory}
             <div className="flex-1 bg-[#fdfaf2] text-[#2c2214] p-5 rounded-2xl border-4 border-[#ded1ba] overflow-y-auto shadow-inner">
               {renderSheet()}
             </div>
-            {/* Mobile-only: back to exam button at bottom of sheet */}
-            <button
-              onClick={() => setMobileView('chat')}
-              className="lg:hidden w-full py-3 bg-indigo-600 active:bg-indigo-500 text-white rounded-xl text-xs font-bold shadow transition-all"
-            >
-              <i className="fa-solid fa-comments mr-2"></i>Back to Proctor Exam
-            </button>
           </section>
 
-          {/* Mobile FAB: quick-access character sheet button while in chat */}
-          {mobileView === 'chat' && (
-            <button
-              onClick={() => setMobileView('sheet')}
-              className="lg:hidden fixed bottom-16 right-4 z-50 flex items-center gap-2 px-4 py-2.5 bg-amber-600 active:bg-amber-500 text-white rounded-full text-xs font-bold shadow-lg transition-all"
-              aria-label="View Character Sheet"
-            >
-              <i className="fa-solid fa-scroll"></i>
-              <span>Character Sheet</span>
-            </button>
-          )}
-
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.5.3 - Mobile Sheet Access
+            v1.6.0 - Clean Slate Wipe
           </div>
 
         </div>
