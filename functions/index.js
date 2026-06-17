@@ -149,7 +149,12 @@ exports.strixhavenConsultant = onCall(
           throw lastError; 
         }
 
-        return JSON.parse(responseText);
+        // Strip markdown code fences that some models emit despite responseMimeType: "application/json"
+        let cleanResponse = responseText.trim();
+        if (cleanResponse.startsWith("```")) {
+          cleanResponse = cleanResponse.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+        }
+        return JSON.parse(cleanResponse);
 
       } catch (error) {
         console.error("Proctor Error:", error);
