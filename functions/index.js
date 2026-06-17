@@ -120,7 +120,7 @@ exports.strixhavenConsultant = onCall(
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const prompt = `[SYSTEM BACKGROUND DATA FOR CURRENT PHASE: ${JSON.stringify(enrichedGameData)}]\n\nSTUDENT SAYS: ${latestMessage}`;
 
-        const fallbackChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
+        const fallbackChain = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
         let responseText = null;
         let lastError = null;
 
@@ -149,7 +149,12 @@ exports.strixhavenConsultant = onCall(
           throw lastError; 
         }
 
-        return JSON.parse(responseText);
+        // Strip markdown code fences that some models emit despite responseMimeType: "application/json"
+        let cleanResponse = responseText.trim();
+        if (cleanResponse.startsWith("```")) {
+          cleanResponse = cleanResponse.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "").trim();
+        }
+        return JSON.parse(cleanResponse);
 
       } catch (error) {
         console.error("Proctor Error:", error);
