@@ -361,7 +361,7 @@
       useEffect(() => {
         if (spellCatalog.length === 0) return;
         const sanitizedSpells = sanitizeSpellsForSheet(safeSpells, selectedClass, selectedCollege);
-        const hasChanged = sanitizedSpells.length !== safeSpells.length || sanitizedSpells.some((spellName, index) => spellName !== safeSpells[index]);
+        const hasChanged = sanitizedSpells.join("::") !== spellSelectionSignature;
         if (hasChanged) setSelectedSpells(sanitizedSpells);
       }, [spellCatalog, selectedClass, selectedCollege, spellSelectionSignature]);
 

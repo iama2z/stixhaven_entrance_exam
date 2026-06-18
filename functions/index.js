@@ -34,7 +34,8 @@ const getAvailableSpellOptions = (selectedClass, selectedCollege) =>
         spell.classes.includes(selectedCollege));
 
 const sanitizeSelectedSpells = (selectedSpells, selectedClass, selectedCollege) => {
-  if (selectedSpells == null || !selectedClass) return selectedSpells;
+  if (selectedSpells == null) return selectedSpells;
+  if (!selectedClass) return [];
   const capacity = SPELL_CAPACITY[selectedClass] || {cantrips: 0, spells: 0};
   const allowedSpells = new Set(
       getAvailableSpellOptions(selectedClass, selectedCollege)
