@@ -185,6 +185,7 @@
       const [phase, setPhase] = useState(1);
       const [activeSheetTab, setActiveSheetTab] = useState(1);
       const [isSaving, setIsSaving] = useState(false);
+      const [isSheetOpen, setIsSheetOpen] = useState(false);
       const [chatHistory, setChatHistory] = useState([]);
       const [chatInput, setChatInput] = useState('');
       const [isChatLoading, setIsChatLoading] = useState(false);
@@ -729,13 +730,22 @@ ${backstory}
           <section className="w-full lg:w-1/2 border-r border-slate-800 flex flex-col bg-slate-900/40 overflow-hidden">
             <div className="px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
               <header className="mb-4 border-b border-amber-500/30 pb-4 flex justify-between items-start">
-                <div>
-                  <h1 className="text-xl font-bold tracking-wider text-amber-400 font-serif">
-                    <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN
-                  </h1>
-                  <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">
-                    Proctor Exam - Phase {phase} of 11
-                  </p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setIsSheetOpen(true)}
+                    className="lg:hidden w-9 h-9 flex items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-amber-400 hover:bg-slate-700 flex-shrink-0"
+                    aria-label="Open character sheet"
+                  >
+                    <i className="fa-solid fa-scroll text-sm"></i>
+                  </button>
+                  <div>
+                    <h1 className="text-xl font-bold tracking-wider text-amber-400 font-serif">
+                      <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN
+                    </h1>
+                    <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">
+                      Proctor Exam - Phase {phase} of 11
+                    </p>
+                  </div>
                 </div>
                 <div className="text-right">
                   <span className="text-[10px] text-slate-500 uppercase block">Student ID</span>
@@ -761,10 +771,28 @@ ${backstory}
             </div>
           </section>
 
-          <section className="w-full lg:w-1/2 p-4 md:p-6 bg-slate-800/30 flex flex-col gap-3 overflow-y-auto">
+          {isSheetOpen && (
+            <div
+              className="fixed inset-0 bg-black/60 z-40 lg:hidden"
+              onClick={() => setIsSheetOpen(false)}
+            />
+          )}
+          <section className={`fixed inset-y-0 right-0 w-[88vw] sm:w-[420px] z-50 lg:static lg:w-1/2 p-4 md:p-6 bg-slate-900 lg:bg-slate-800/30 flex flex-col gap-3 overflow-y-auto shadow-2xl lg:shadow-none transition-transform duration-300 ease-in-out ${isSheetOpen ? 'translate-x-0' : 'translate-x-full lg:translate-x-0'}`}>
+            <div className="flex items-center justify-between mb-1 lg:hidden flex-shrink-0">
+              <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
+                <i className="fa-solid fa-scroll mr-1.5"></i>Character Sheet
+              </span>
+              <button
+                onClick={() => setIsSheetOpen(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-slate-400 hover:text-white"
+                aria-label="Close character sheet"
+              >
+                <i className="fa-solid fa-times"></i>
+              </button>
+            </div>
             <div className="flex gap-2 border-b border-slate-800 pb-3">
               {[{ id: 1, label: "Core Stats" }, { id: 2, label: "Backstory" }, { id: 3, label: "Spellbook" }, { id: 4, label: "Campus" }].map(tab => (
-                <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-800 hover:border-amber-500/40"}`}>
+                <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)} className={`flex-1 px-2 lg:px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-800 hover:border-amber-500/40"}`}>
                   {tab.label}
                 </button>
               ))}
