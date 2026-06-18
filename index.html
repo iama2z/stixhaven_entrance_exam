@@ -225,6 +225,7 @@
 
       const safeSpells = Array.isArray(selectedSpells) ? selectedSpells : [];
       const safeSkills = Array.isArray(selectedSkills) ? selectedSkills : [];
+      const spellSelectionSignature = safeSpells.join("::");
       const allSpells = spellCatalog.length > 0 ? spellCatalog : FALLBACK_SPELLS;
       const spellLookup = allSpells.reduce((acc, spell) => {
         acc[spell.name] = spell;
@@ -362,7 +363,7 @@
         const sanitizedSpells = sanitizeSpellsForSheet(safeSpells, selectedClass, selectedCollege);
         const hasChanged = sanitizedSpells.length !== safeSpells.length || sanitizedSpells.some((spellName, index) => spellName !== safeSpells[index]);
         if (hasChanged) setSelectedSpells(sanitizedSpells);
-      }, [spellCatalog, selectedClass, selectedCollege, selectedSpells]);
+      }, [spellCatalog, selectedClass, selectedCollege, spellSelectionSignature]);
 
       useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
