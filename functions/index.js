@@ -1,8 +1,6 @@
-/* eslint-disable */
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {initializeApp} = require("firebase-admin/app");
 const {GoogleGenerativeAI} = require("@google/generative-ai");
-const spellsData = require("./data/spells.json");
 
 initializeApp();
 
@@ -27,19 +25,6 @@ Phase 5: The Six-Step Core Attribute Exam - DO NOT ASK FOR NUMBERS DIRECTLY. Pre
 Phase 6: Specialized Tool Selection - "What is your primary method of focus?" A) Mechanical aids B) Traditional instruments C) Organic items
 Phase 7: Equipment & Armor - Ask TWO things: 1) "How do you prepare for the unknown?" (A: Travel light B: Prepare for everything C: Presentation). 2) "What type of armor do you rely on?" (Light Armor, Medium Armor, Heavy Armor, or Unarmored).
 Phase 8: The Arcane Tuning (Spells) - "What is your role on the battlefield?" A) Destruction B) Control C) Harmony
-
-CRITICAL SPELL-FILLING RULES FOR PHASE 8:
-* The SYSTEM BACKGROUND DATA for this phase includes: currentClass, currentCollege, currentSpells (already chosen), requiredCantrips, requiredSpells, and extendedSpellList (an object with "cantrips" and "firstLevel" arrays listing ALL spells eligible for this character from the full spell database).
-* Non-spellcasters (requiredCantrips = 0 AND requiredSpells = 0): Briefly acknowledge they have no spell slots and advance to Phase 9 immediately.
-* BEFORE presenting any options, silently calculate: needCantrips = requiredCantrips - (count of cantrips already in currentSpells); needSpells = requiredSpells - (count of 1st-level spells already in currentSpells).
-* For spellcasters, after the student picks a resonance theme (Destruction / Control / Harmony):
-  1. Your PRIMARY spell source is extendedSpellList (provided in the system background data). It contains ALL spells this character can legally learn. Always draw from extendedSpellList.cantrips and extendedSpellList.firstLevel first, prioritising ones that match the chosen resonance theme.
-  2. Suggest AT LEAST (needCantrips * 2) cantrip options AND at least (needSpells * 2) 1st-level spell options in a single message — even if that means listing every eligible spell from extendedSpellList. For classes like Wizard with 5 cantrips and 7 spells required, you MUST provide at least 10 cantrip options and 14 spell options.
-  3. ALWAYS propose enough specific named spells to fill ALL remaining empty slots in one message. Never send a reply that leaves the student with fewer suggestions than open slots.
-  4. Present cantrip options and 1st-level spell options in clearly labelled, numbered separate lists so the student can pick easily.
-  5. After the student confirms their selections, update selectedSpells in your JSON with the FULL confirmed list (all previously chosen plus newly added).
-  6. DO NOT advance nextPhaseNumber to 9 until selectedSpells contains at least requiredCantrips cantrips AND requiredSpells 1st-level spells.
-  7. If after a confirmation step selectedSpells still has empty slots, IMMEDIATELY offer additional named options from extendedSpellList WITHOUT waiting to be asked — never make the student ask a second time.
 Phase 9: Academic Aptitude & Languages - Ask TWO things: 1) "What do you want to be known for in class?" (A: Talking B: Secrets C: Heavy lifting). 2) "Which foreign language are you studying?" (Proctor Tip: Suggest Draconic for scholars, Sylvan for Witherbloom, Primordial for Prismari, or Dwarvish/Elvish for Lorehold).
 Phase 10: Psychological Evaluation (Backstory) - Present a 4-part "Personality Quiz" all at once:
 1) The Spark: "How did your magic first spectacularly (or disastrously) manifest?" (A: Intense emotion, B: Tinkering, C: Performance)
@@ -58,7 +43,6 @@ Your JSON schema MUST look exactly like this template. Include ONLY the keys tha
   "systemUpdates": {
     "nextPhaseNumber": 2,
     "selectedLineage": "Owlin",
-    "selectedSize": "Medium",
     "selectedClass": "Bard",
     "selectedCollege": "Prismari",
     "selectedClub": "Drama Society",
@@ -91,36 +75,19 @@ exports.strixhavenConsultant = onCall(
         const latestMessage = requestData.latestMessage || "Introduce yourself and begin Phase 1.";
         const gameData = requestData.gameData || {};
 
-        // Build a class- and college-filtered spell list from the full database
-        const currentClass = gameData.currentClass || "";
-        const currentCollege = gameData.currentCollege || "";
-        const extendedSpellList = {
-          cantrips: Object.entries(spellsData)
-            .filter(([, s]) => s.level === "Cantrip" &&
-              (s.classes.includes(currentClass) || (currentCollege && s.classes.includes(currentCollege))))
-            .map(([name]) => name),
-          firstLevel: Object.entries(spellsData)
-            .filter(([, s]) => s.level === "1st-level" &&
-              (s.classes.includes(currentClass) || (currentCollege && s.classes.includes(currentCollege))))
-            .map(([name]) => name),
-        };
-        const enrichedGameData = { ...gameData, extendedSpellList };
-
-        let historyForGemini = chatHistory.slice(0, -1)
-          .filter(msg => msg && typeof msg.role === 'string' && typeof msg.text === 'string')
-          .map(msg => ({
-            role: msg.role === 'proctor' ? 'model' : 'user',
-            parts: [{ text: String(msg.text) }]
-          }));
+        let historyForGemini = chatHistory.slice(0, -1).map(msg => ({
+          role: msg.role === 'proctor' ? 'model' : 'user',
+          parts: [{ text: msg.text }]
+        }));
 
         while (historyForGemini.length > 0 && historyForGemini[0].role === 'model') {
           historyForGemini.shift();
         }
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const prompt = `[SYSTEM BACKGROUND DATA FOR CURRENT PHASE: ${JSON.stringify(enrichedGameData)}]\n\nSTUDENT SAYS: ${latestMessage}`;
+        const prompt = `[SYSTEM BACKGROUND DATA FOR CURRENT PHASE: ${JSON.stringify(gameData)}]\n\nSTUDENT SAYS: ${latestMessage}`;
 
-        const fallbackChain = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"];
+        const fallbackChain = ["gemini-3.5-flash", "gemini-3.1-flash-lite", "gemini-2.5-flash"];
         let responseText = null;
         let lastError = null;
 
@@ -149,12 +116,7 @@ exports.strixhavenConsultant = onCall(
           throw lastError; 
         }
 
-        // Strip markdown code fences that some models emit despite responseMimeType: "application/json"
-        let cleanResponse = responseText.trim();
-        if (cleanResponse.startsWith("```")) {
-          cleanResponse = cleanResponse.replace(/^```(?:json)?\s*/, "").replace(/\s*```$/, "").trim();
-        }
-        return JSON.parse(cleanResponse);
+        return JSON.parse(responseText);
 
       } catch (error) {
         console.error("Proctor Error:", error);

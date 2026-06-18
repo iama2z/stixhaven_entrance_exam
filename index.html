@@ -14,6 +14,7 @@
 <body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
   <div id="root"></div>
 
+  <!-- FIREBASE ENGINE (Must be type="module") -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
@@ -64,6 +65,7 @@
     initializeSession();
   </script>
 
+  <!-- REACT INTERFACE (Must be type="text/babel") -->
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
@@ -774,7 +776,7 @@ ${backstory}
           </section>
 
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.6.1 - Cache Buster
+            v1.6.1 - Base Restored
           </div>
 
         </div>
@@ -784,4 +786,4 @@ ${backstory}
     ReactDOM.createRoot(document.getElementById('root')).render(<App />);
   </script>
 </body>
-</html> 
+</html>
