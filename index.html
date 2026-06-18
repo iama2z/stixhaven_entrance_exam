@@ -7,21 +7,28 @@
   
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-functions-compat.js"></script>
+
+  <script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.23.9/babel.min.js"></script>
 </head>
-<body style="background-color: hotpink;" class="text-slate-100 font-sans min-h-screen">
-  <div id="root"></div>
+<body class="bg-slate-950 text-slate-100 font-sans min-h-screen">
+  
+  <div id="root">
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background-color: #0f172a; color: #f8fafc; font-family: sans-serif; text-align: center; padding: 2rem;">
+      <div>
+        <h1 style="font-size: 1.5rem; font-weight: bold; color: #fbbf24; margin-bottom: 1rem;">STRIXHAVEN MAINFRAME BOOTING...</h1>
+        <p style="font-size: 0.875rem; color: #94a3b8;">Loading React engines and compiling Babel...</p>
+      </div>
+    </div>
+  </div>
 
-  <!-- FIREBASE ENGINE (Must be type="module") -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
-    import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-    import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-functions.js";
-
+  <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDNpbiRhVCXSRov1Uv4bkEAH7MVvdGTZio",
       authDomain: "strixhaven-entrance-exam.firebaseapp.com",
@@ -32,19 +39,15 @@
       measurementId: "G-87PT8HMF3V"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-    const functions = getFunctions(app);
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    const functions = firebase.functions();
 
     window.firebaseDb = db;
     window.firebaseAuth = auth;
-    window.firestoreDoc = doc;
-    window.firestoreSetDoc = setDoc;
-    window.firestoreGetDoc = getDoc; 
 
-    const askStrixhavenConsultant = httpsCallable(functions, 'strixhavenConsultant');
+    const askStrixhavenConsultant = functions.httpsCallable('strixhavenConsultant');
     window.askAdmissionsAI = async (chatHistory, latestMessage, gameData) => {
         const result = await askStrixhavenConsultant({ 
             chatHistory,
@@ -54,19 +57,15 @@
         return result.data;
     };
 
-    async function initializeSession() {
-      try {
-        await signInAnonymously(auth);
-        console.log("Connected to Strixhaven Mainframe.");
-      } catch (error) {
-        console.warn("Firebase Auth blocked. Local mode only.", error.message);
-      }
-    }
-    initializeSession();
+    auth.signInAnonymously()
+      .then(() => console.log("Connected to Strixhaven Mainframe."))
+      .catch((error) => console.warn("Firebase Auth blocked.", error.message));
   </script>
 
-  <!-- REACT INTERFACE (Must be type="text/babel") -->
   <script type="text/babel">
+    /** @jsx React.createElement */
+    /** @jsxFrag React.Fragment */
+    
     const { useState, useEffect, useRef } = React;
 
     const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8];
@@ -315,18 +314,18 @@
 
         setIsAuthLoading(true);
         try {
-          const docRef = window.firestoreDoc(window.firebaseDb, "student_enrollments", cleanUsername);
-          const docSnap = await window.firestoreGetDoc(docRef);
+          const docRef = window.firebaseDb.collection("student_enrollments").doc(cleanUsername);
+          const docSnap = await docRef.get();
 
           if (loginMode === 'returning') {
-            if (docSnap.exists() && docSnap.data().portalPassword === portalPassword) {
+            if (docSnap.exists && docSnap.data().portalPassword === portalPassword) {
               loadStudentData(docSnap.data());
               setIsAuthenticated(true);
             } else {
               setAuthError('Invalid Student ID or Password.');
             }
           } else {
-            if (docSnap.exists()) {
+            if (docSnap.exists) {
               setAuthError('This Student ID is already taken.');
             } else {
               setIsAuthenticated(true);
@@ -366,7 +365,7 @@
         setIsSaving(true);
         try {
           const cleanUsername = portalUsername.trim().toLowerCase();
-          await window.firestoreSetDoc(window.firestoreDoc(window.firebaseDb, "student_enrollments", cleanUsername), {
+          await window.firebaseDb.collection("student_enrollments").doc(cleanUsername).set({
             portalUsername: cleanUsername,
             portalPassword: portalPassword,
             phase, chatHistory, characterName, selectedLineage, selectedSize, selectedCollege, selectedClass,
@@ -726,7 +725,7 @@ ${backstory}
       }
 
       return (
-        <div className="flex flex-col lg:flex-row h-screen relative">
+        <div className="flex flex-col lg:flex-row h-screen relative z-10 bg-slate-950">
           <section className="w-full lg:w-1/2 border-r border-slate-800 flex flex-col bg-slate-900/40 overflow-hidden">
             <div className="px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
               <header className="mb-4 border-b border-amber-500/30 pb-4 flex justify-between items-start">
@@ -776,14 +775,17 @@ ${backstory}
           </section>
 
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.6.1 - Base Restored
+            v1.7.2 - Babel Fix Complete
           </div>
 
         </div>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    // Wait for Babel to finish compiling, then clear the boot screen and render the app!
+    const rootElement = document.getElementById('root');
+    rootElement.innerHTML = ''; 
+    ReactDOM.createRoot(rootElement).render(<App />);
   </script>
 </body>
 </html>
