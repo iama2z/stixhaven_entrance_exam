@@ -51,7 +51,8 @@ const sanitizeSelectedSpells = (selectedSpells, selectedClass, selectedCollege) 
   const leveled = [];
 
   requestedSpells.forEach((spellName) => {
-    const spellLevel = SPELL_LOOKUP[spellName]?.level;
+    const spellDetails = SPELL_LOOKUP[spellName] || {};
+    const spellLevel = spellDetails.level;
     if (spellLevel === "Cantrip" && cantrips.length < capacity.cantrips) {
       cantrips.push(spellName);
     }
