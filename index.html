@@ -174,6 +174,13 @@
       ]
     };
 
+    const FALLBACK_SPELLS = Object.values(SPELLS_BY_RESONANCE).flat();
+    const LEVEL_ONE_SPELL_LEVELS = new Set(["Cantrip", "1st-level"]);
+    const normalizeSpellCatalog = (spellMap) => Object.entries(spellMap || {}).map(([name, spell]) => ({
+      name,
+      ...spell
+    }));
+
     function App() {
       const [isAuthenticated, setIsAuthenticated] = useState(false);
       const [loginMode, setLoginMode] = useState('new'); 
@@ -205,6 +212,7 @@
       const [selectedLanguage, setSelectedLanguage] = useState("Common");
       const [resonanceType, setResonanceType] = useState(null);
       const [selectedSpells, setSelectedSpells] = useState([]);
+      const [spellCatalog, setSpellCatalog] = useState([]);
       const [selectedSkills, setSelectedSkills] = useState([]);
       
       const [selectedTrait, setSelectedTrait] = useState("");
@@ -217,6 +225,11 @@
 
       const safeSpells = Array.isArray(selectedSpells) ? selectedSpells : [];
       const safeSkills = Array.isArray(selectedSkills) ? selectedSkills : [];
+      const allSpells = spellCatalog.length > 0 ? spellCatalog : FALLBACK_SPELLS;
+      const spellLookup = allSpells.reduce((acc, spell) => {
+        acc[spell.name] = spell;
+        return acc;
+      }, {});
 
       const getScore  = (stat) => (statAssignments || {})[stat] ?? 10;
       const getMod    = (stat) => Math.floor((getScore(stat) - 10) / 2);
@@ -224,6 +237,32 @@
       const getMaxHP = () => (CLASSES[selectedClass]?.hitDie || 8) + getMod("CON");
       const getSpellAbility = () => COLLEGES[selectedCollege]?.spellcastingAbility || "INT";
       const getSpellSaveDC = () => 8 + 2 + getMod(getSpellAbility());
+      const getSpellCapacity = (className = selectedClass) => SPELL_CAPACITY[className] || { cantrips: 0, spells: 0 };
+      const getSpellOptions = ({ className = selectedClass, collegeName = selectedCollege, includeCollegeExtras = true } = {}) =>
+        allSpells
+          .filter((spell) => LEVEL_ONE_SPELL_LEVELS.has(spell.level))
+          .filter((spell) => spell.classes.includes(className) || (includeCollegeExtras && spell.classes.includes(collegeName)))
+          .sort((a, b) => a.name.localeCompare(b.name));
+      const getCollegeSpellOptions = ({ className = selectedClass, collegeName = selectedCollege } = {}) =>
+        getSpellOptions({ className, collegeName, includeCollegeExtras: true })
+          .filter((spell) => spell.classes.includes(collegeName) && !spell.classes.includes(className));
+      const sanitizeSpellsForSheet = (spells, className = selectedClass, collegeName = selectedCollege) => {
+        const requestedSpells = (Array.isArray(spells) ? spells : [spells])
+          .filter(Boolean)
+          .filter((spellName, index, list) => list.indexOf(spellName) === index);
+        const capacity = getSpellCapacity(className);
+        const allowedSpells = new Set(getSpellOptions({ className, collegeName }).map((spell) => spell.name));
+        const cantrips = [];
+        const leveled = [];
+
+        requestedSpells.forEach((spellName) => {
+          if (!allowedSpells.has(spellName)) return;
+          if (spellLookup[spellName]?.level === "Cantrip" && cantrips.length < capacity.cantrips) cantrips.push(spellName);
+          if (spellLookup[spellName]?.level === "1st-level" && leveled.length < capacity.spells) leveled.push(spellName);
+        });
+
+        return [...cantrips, ...leveled];
+      };
       
       const getAC = () => {
         const dexMod = getMod("DEX");
@@ -239,7 +278,12 @@
           classes: CLASSES, 
           colleges: COLLEGES, 
           clubs: CLUBS, 
-          currentClass: selectedClass 
+          currentClass: selectedClass,
+          currentCollege: selectedCollege,
+          spellCapacity: getSpellCapacity(selectedClass),
+          availableClassSpells: getSpellOptions({ className: selectedClass, collegeName: selectedCollege, includeCollegeExtras: false }).map(({ name, level }) => ({ name, level })),
+          availableCollegeSpells: getCollegeSpellOptions({ className: selectedClass, collegeName: selectedCollege }).map(({ name, level }) => ({ name, level })),
+          selectedSpells: safeSpells
         };
       };
 
@@ -298,6 +342,27 @@
         if (updates.characterName != null) setCharacterName(updates.characterName);
         if (updates.backstory != null) setBackstory(updates.backstory);
       };
+
+      useEffect(() => {
+        let isMounted = true;
+        fetch('./data/spells.json')
+          .then((response) => {
+            if (!response.ok) throw new Error(`Failed to load spell catalog: ${response.status}`);
+            return response.json();
+          })
+          .then((data) => {
+            if (isMounted) setSpellCatalog(normalizeSpellCatalog(data));
+          })
+          .catch((error) => console.warn("Spell catalog fallback engaged.", error.message));
+        return () => { isMounted = false; };
+      }, []);
+
+      useEffect(() => {
+        if (spellCatalog.length === 0) return;
+        const sanitizedSpells = sanitizeSpellsForSheet(safeSpells, selectedClass, selectedCollege);
+        const hasChanged = sanitizedSpells.length !== safeSpells.length || sanitizedSpells.some((spellName, index) => spellName !== safeSpells[index]);
+        if (hasChanged) setSelectedSpells(sanitizedSpells);
+      }, [spellCatalog, selectedClass, selectedCollege, selectedSpells]);
 
       useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -586,16 +651,14 @@ ${backstory}
           );
 
           case 3: {
-            const baseCap = SPELL_CAPACITY[selectedClass] || { cantrips: 0, spells: 0 };
+            const baseCap = getSpellCapacity(selectedClass);
             const isSpellcaster = baseCap.cantrips > 0 || baseCap.spells > 0;
-            const expectedCantrips = baseCap.cantrips + (isSpellcaster ? 2 : 0);
-            const expectedSpells = baseCap.spells + (isSpellcaster ? 1 : 0);
-
-            const allSpells = Object.values(SPELLS_BY_RESONANCE).reduce((acc, val) => acc.concat(val), []);
+            const expectedCantrips = baseCap.cantrips;
+            const expectedSpells = baseCap.spells;
             
-            const cantrips = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "Cantrip");
-            const leveled = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "1st-level");
-            const unclassified = safeSpells.filter(s => !allSpells.find(x => x.name === s));
+            const cantrips = safeSpells.filter((s) => spellLookup[s]?.level === "Cantrip");
+            const leveled = safeSpells.filter((s) => spellLookup[s]?.level === "1st-level");
+            const unclassified = safeSpells.filter((s) => !spellLookup[s]);
 
             const missingCantrips = Math.max(0, expectedCantrips - cantrips.length);
             const missingSpells = Math.max(0, expectedSpells - leveled.length - unclassified.length);
@@ -607,9 +670,12 @@ ${backstory}
             };
             const handleRemoveSpell = (s) => setSelectedSpells(safeSpells.filter(x => x !== s));
 
-            const validSpellOptions = allSpells
-              .filter(s => !safeSpells.includes(s.name))
-              .filter(s => s.classes.includes(selectedClass) || s.classes.includes(selectedCollege));
+            const validSpellOptions = getSpellOptions()
+              .filter((spell) => !safeSpells.includes(spell.name));
+            const classCantripOptions = validSpellOptions.filter((spell) => spell.level === "Cantrip" && spell.classes.includes(selectedClass));
+            const collegeCantripOptions = validSpellOptions.filter((spell) => spell.level === "Cantrip" && spell.classes.includes(selectedCollege) && !spell.classes.includes(selectedClass));
+            const classSpellOptions = validSpellOptions.filter((spell) => spell.level === "1st-level" && spell.classes.includes(selectedClass));
+            const collegeSpellOptions = validSpellOptions.filter((spell) => spell.level === "1st-level" && spell.classes.includes(selectedCollege) && !spell.classes.includes(selectedClass));
 
             return (
               <div className="space-y-4">
@@ -641,7 +707,12 @@ ${backstory}
                   {Array.from({ length: missingCantrips }).map((_, i) => (
                     <select key={`c-${i}`} onChange={handleAddSpell} value="" className="w-full bg-red-900/5 border border-red-900/20 text-red-900 rounded p-1.5 mb-1 text-xs outline-none cursor-pointer">
                       <option value="" disabled>+ Empty Cantrip Slot...</option>
-                      {validSpellOptions.filter(s => s.level === "Cantrip").map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                      {classCantripOptions.map((spell) => <option key={spell.name} value={spell.name}>{spell.name}</option>)}
+                      {collegeCantripOptions.length > 0 && (
+                        <optgroup label={`${selectedCollege} options`}>
+                          {collegeCantripOptions.map((spell) => <option key={spell.name} value={spell.name}>{spell.name}</option>)}
+                        </optgroup>
+                      )}
                     </select>
                   ))}
                 </div>
@@ -659,7 +730,12 @@ ${backstory}
                   {Array.from({ length: missingSpells }).map((_, i) => (
                     <select key={`s-${i}`} onChange={handleAddSpell} value="" className="w-full bg-red-900/5 border border-red-900/20 text-red-900 rounded p-1.5 mb-1 text-xs outline-none cursor-pointer">
                       <option value="" disabled>+ Empty 1st-Level Slot...</option>
-                      {validSpellOptions.filter(s => s.level === "1st-level").map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                      {classSpellOptions.map((spell) => <option key={spell.name} value={spell.name}>{spell.name}</option>)}
+                      {collegeSpellOptions.length > 0 && (
+                        <optgroup label={`${selectedCollege} options`}>
+                          {collegeSpellOptions.map((spell) => <option key={spell.name} value={spell.name}>{spell.name}</option>)}
+                        </optgroup>
+                      )}
                     </select>
                   ))}
                 </div>
@@ -667,7 +743,7 @@ ${backstory}
                 <div className="text-[10px] text-slate-500 italic mt-3 bg-slate-900/5 p-2 rounded">
                   <i className="fa-solid fa-circle-info mr-1 text-indigo-400"></i>
                   {isSpellcaster
-                    ? "Slot capacity includes Level 1 Class mechanics plus the +2 Cantrips and +1 Spell granted by the Strixhaven Initiate background feat."
+                    ? "Slot counts are based on your class. College-linked spells remain available in the dropdowns as alternative options."
                     : "Your class has no innate spellcasting. No spell slots are required."}
                 </div>
               </div>

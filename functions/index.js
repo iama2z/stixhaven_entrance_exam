@@ -2,8 +2,83 @@
 const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {initializeApp} = require("firebase-admin/app");
 const {GoogleGenerativeAI} = require("@google/generative-ai");
+const spellsData = require("./data/spells.json");
 
 initializeApp();
+
+const SPELL_CAPACITY = {
+  Bard: {cantrips: 2, spells: 4},
+  Cleric: {cantrips: 3, spells: 4},
+  Druid: {cantrips: 2, spells: 4},
+  Fighter: {cantrips: 0, spells: 0},
+  Monk: {cantrips: 0, spells: 0},
+  Paladin: {cantrips: 0, spells: 0},
+  Ranger: {cantrips: 0, spells: 0},
+  Rogue: {cantrips: 0, spells: 0},
+  Sorcerer: {cantrips: 4, spells: 2},
+  Warlock: {cantrips: 2, spells: 2},
+  Wizard: {cantrips: 3, spells: 6},
+  Barbarian: {cantrips: 0, spells: 0},
+};
+
+const SPELL_LOOKUP = Object.entries(spellsData).reduce((acc, [name, spell]) => {
+  acc[name] = {...spell, name};
+  return acc;
+}, {});
+
+const getAvailableSpellOptions = (selectedClass, selectedCollege) =>
+  Object.entries(spellsData)
+      .map(([name, spell]) => ({name, ...spell}))
+      .filter((spell) => ["Cantrip", "1st-level"].includes(spell.level))
+      .filter((spell) => spell.classes.includes(selectedClass) ||
+        spell.classes.includes(selectedCollege));
+
+const sanitizeSelectedSpells = (selectedSpells, selectedClass, selectedCollege) => {
+  if (selectedSpells == null || !selectedClass) return selectedSpells;
+  const capacity = SPELL_CAPACITY[selectedClass] || {cantrips: 0, spells: 0};
+  const allowedSpells = new Set(
+      getAvailableSpellOptions(selectedClass, selectedCollege)
+          .map((spell) => spell.name),
+  );
+  const requestedSpells = (Array.isArray(selectedSpells) ?
+    selectedSpells :
+    [selectedSpells])
+      .filter(Boolean)
+      .filter((spellName, index, list) =>
+        list.indexOf(spellName) === index && allowedSpells.has(spellName));
+
+  const cantrips = [];
+  const leveled = [];
+
+  requestedSpells.forEach((spellName) => {
+    const spellLevel = SPELL_LOOKUP[spellName]?.level;
+    if (spellLevel === "Cantrip" && cantrips.length < capacity.cantrips) {
+      cantrips.push(spellName);
+    }
+    if (spellLevel === "1st-level" && leveled.length < capacity.spells) {
+      leveled.push(spellName);
+    }
+  });
+
+  return [...cantrips, ...leveled];
+};
+
+const sanitizeSystemUpdates = (systemUpdates, gameData = {}) => {
+  if (!systemUpdates || systemUpdates.selectedSpells == null) return systemUpdates;
+  const selectedClass =
+    systemUpdates.selectedClass || gameData.currentClass || gameData.selectedClass;
+  const selectedCollege =
+    systemUpdates.selectedCollege || gameData.currentCollege || gameData.selectedCollege;
+
+  return {
+    ...systemUpdates,
+    selectedSpells: sanitizeSelectedSpells(
+        systemUpdates.selectedSpells,
+        selectedClass,
+        selectedCollege,
+    ),
+  };
+};
 
 const PROCTOR_INSTRUCTIONS = `
 You are an Admissions Proctor at Strixhaven University. You are conducting an official, interactive Entrance Exam to help a prospective student build their D&D 5e character sheet. 
@@ -25,7 +100,7 @@ Phase 4: Extracurricular Activities - "How do you spend your free time between l
 Phase 5: The Six-Step Core Attribute Exam - DO NOT ASK FOR NUMBERS DIRECTLY. Present a 3-part "Crisis Simulation": 1) A rogue clockwork assistant hurtles toward them: Duck (DEX), Brace (STR), or Command it (Mental)? 2) A strict proctor demands an explanation: Charm (CHA), Analyze (INT/WIS), or Suffer silently (CON)? 3) Navigate shifting architecture: Instincts (WIS), Sprint (STR), or Push through exhaustion (CON)? Then assign Standard Array (15, 14, 13, 12, 10, 8).
 Phase 6: Specialized Tool Selection - "What is your primary method of focus?" A) Mechanical aids B) Traditional instruments C) Organic items
 Phase 7: Equipment & Armor - Ask TWO things: 1) "How do you prepare for the unknown?" (A: Travel light B: Prepare for everything C: Presentation). 2) "What type of armor do you rely on?" (Light Armor, Medium Armor, Heavy Armor, or Unarmored).
-Phase 8: The Arcane Tuning (Spells) - "What is your role on the battlefield?" A) Destruction B) Control C) Harmony
+Phase 8: The Arcane Tuning (Spells) - "What is your role on the battlefield?" A) Destruction B) Control C) Harmony. Use the provided spellCapacity plus availableClassSpells and availableCollegeSpells data. Fill ONLY the class-based cantrip and 1st-level spell counts. College-based spells are alternative options, not extra slots.
 Phase 9: Academic Aptitude & Languages - Ask TWO things: 1) "What do you want to be known for in class?" (A: Talking B: Secrets C: Heavy lifting). 2) "Which foreign language are you studying?" (Proctor Tip: Suggest Draconic for scholars, Sylvan for Witherbloom, Primordial for Prismari, or Dwarvish/Elvish for Lorehold).
 Phase 10: Psychological Evaluation (Backstory) - Present a 4-part "Personality Quiz" all at once:
 1) The Spark: "How did your magic first spectacularly (or disastrously) manifest?" (A: Intense emotion, B: Tinkering, C: Performance)
@@ -117,7 +192,15 @@ exports.strixhavenConsultant = onCall(
           throw lastError; 
         }
 
-        return JSON.parse(responseText);
+        const parsedResponse = JSON.parse(responseText);
+        if (parsedResponse.systemUpdates) {
+          parsedResponse.systemUpdates = sanitizeSystemUpdates(
+              parsedResponse.systemUpdates,
+              gameData,
+          );
+        }
+
+        return parsedResponse;
 
       } catch (error) {
         console.error("Proctor Error:", error);
