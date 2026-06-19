@@ -346,7 +346,8 @@
 
       const stripInlineOptions = (text) => {
         if (!text || typeof text !== "string") return text || "";
-        const markers = [...text.matchAll(/\s+[A-H][).:-]\s/gi)];
+        // Match uppercase option markers (A) B) etc.); require index > 0 to preserve question text before options
+        const markers = [...text.matchAll(/\s+[A-H][).:-]\s/g)];
         if (markers.length >= 2 && markers[0].index > 0) {
           return text.slice(0, markers[0].index).trim();
         }
@@ -767,7 +768,7 @@ ${backstory}
 
               {assessmentState.proctorHint && (
                 <div className="mt-4 pt-3 border-t border-indigo-500/20">
-                  <p className="text-[11px] uppercase tracking-[0.15em] text-indigo-400/70 font-semibold mb-1">
+                  <p className="text-xs uppercase tracking-[0.15em] text-indigo-400/70 font-semibold mb-1">
                     <i className="fa-solid fa-feather-pointed mr-1.5"></i>Proctor's Note
                   </p>
                   <p className="text-xs text-indigo-200/60 italic leading-relaxed">
