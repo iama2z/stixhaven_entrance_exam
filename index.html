@@ -237,6 +237,7 @@
     };
 
     const OPTION_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const MAX_TRANSCRIPT_ENTRIES = 8;
 
     function App() {
       const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -324,7 +325,7 @@
       const extractInlineOptions = (message) => {
         if (!message || typeof message !== "string") return [];
         const collected = [];
-        const regex = /(?:^|\s)([A-H])[)\].:-]\s*([^]+?)(?=(?:\s+[A-H][)\].:-]\s*)|$)/gi;
+        const regex = /(?:^|\s)([A-H])[)\].:-]\s*([^\n]+?)(?=(?:\s+[A-H][)\].:-]\s*)|$)/gi;
         let match;
         while ((match = regex.exec(message)) !== null) {
           const optionText = (match[2] || "").replace(/\s+/g, " ").trim();
@@ -337,7 +338,7 @@
       const sanitizeOptionText = (value) => {
         if (typeof value !== "string") return "";
         return value
-          .replace(/^\s*[A-H][)\].:-]\s*/i, "")
+          .replace(/^\s*[A-Ha-h][)\].:-]\s*/, "")
           .replace(/\s+/g, " ")
           .trim();
       };
@@ -359,8 +360,9 @@
         }
 
         const fallbackOptions = PHASE_OPTION_FALLBACKS[fallbackPhase] || [];
-        const expectedOptionCount = Number.isFinite(Number(rawAssessment.expectedOptionCount))
-          ? Math.max(0, Math.min(8, Number(rawAssessment.expectedOptionCount)))
+        const parsedExpectedCount = Number(rawAssessment.expectedOptionCount);
+        const expectedOptionCount = Number.isFinite(parsedExpectedCount)
+          ? Math.max(0, Math.min(8, parsedExpectedCount))
           : (options.length || fallbackOptions.length || 0);
 
         const seen = new Set();
@@ -746,7 +748,7 @@ ${backstory}
             <div className="mt-4 bg-slate-900/70 border border-slate-700/60 rounded-xl p-3 overflow-y-auto min-h-0 flex-1">
               <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2 font-semibold">Transcript</p>
               <div className="space-y-2 pr-1">
-                {chatHistory.slice(-8).map((msg, i) => (
+                {chatHistory.slice(-MAX_TRANSCRIPT_ENTRIES).map((msg, i) => (
                   <div key={i} className={`text-sm rounded-lg px-3 py-2 border ${
                     msg.role === "user"
                       ? "bg-amber-500/10 border-amber-500/30 text-amber-100"

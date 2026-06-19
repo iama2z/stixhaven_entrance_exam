@@ -131,6 +131,7 @@ const normalizeAssessment = (assessment, fallbackPhaseNumber) => {
     payload.question.trim() : "";
 
   let options = Array.isArray(payload.options) ? payload.options : [];
+  const seen = new Set();
   options = options
       .map((option) => {
         if (typeof option === "string") return option.trim();
@@ -138,8 +139,12 @@ const normalizeAssessment = (assessment, fallbackPhaseNumber) => {
         return "";
       })
       .filter(Boolean)
-      .filter((value, index, arr) => arr.findIndex((item) =>
-        item.toLowerCase() === value.toLowerCase()) === index)
+      .filter((value) => {
+        const key = value.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
       .slice(0, 8);
 
   const answerType = VALID_ANSWER_TYPES.has(payload.answerType) ?
