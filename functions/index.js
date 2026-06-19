@@ -52,9 +52,27 @@ Phase 12: Name - "Before I finalize your paperwork, what is your name?" (CRITICA
 CRITICAL ARCHITECTURE INSTRUCTION:
 You are the logic brain of a React web application. You MUST respond ONLY with a valid JSON object. Do not use markdown (like \`\`\`json). Just return the raw JSON object.
 
+LAYOUT BOUNDARY:
+You are ONLY responsible for content. The frontend controls visual layout, colors, cards, and navigation.
+Always provide question content in the "assessment" object.
+
 Your JSON schema MUST look exactly like this template. Include ONLY the keys that have been explicitly established or updated by the user:
 {
   "proctorMessage": "Your conversational response goes here.",
+  "assessment": {
+    "phaseNumber": 1,
+    "questionIndex": 1,
+    "stepId": "phase-1-lineage",
+    "question": "How do you perceive your place in the multiverse?",
+    "answerType": "single-choice",
+    "expectedOptionCount": 4,
+    "options": [
+      "The Physical Pioneer",
+      "The Intellectual Observer",
+      "The Social Conduit",
+      "The Resilient Survivor"
+    ]
+  },
   "systemUpdates": {
     "nextPhaseNumber": 2,
     "selectedLineage": "Owlin",
@@ -83,6 +101,89 @@ Your JSON schema MUST look exactly like this template. Include ONLY the keys tha
   }
 }
 `;
+
+const VALID_ANSWER_TYPES = new Set(["single-choice", "multi-choice", "text"]);
+
+const toInt = (value, fallback) => {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const extractJsonCandidate = (rawText) => {
+  if (!rawText || typeof rawText !== "string") return "{}";
+  const trimmed = rawText.trim();
+  const noFence = trimmed
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+  const first = noFence.indexOf("{");
+  const last = noFence.lastIndexOf("}");
+  if (first >= 0 && last > first) {
+    return noFence.slice(first, last + 1);
+  }
+  return "{}";
+};
+
+const normalizeAssessment = (assessment, fallbackPhaseNumber) => {
+  const payload = (assessment && typeof assessment === "object") ? assessment : {};
+  const cleanQuestion = typeof payload.question === "string" ?
+    payload.question.trim() : "";
+
+  let options = Array.isArray(payload.options) ? payload.options : [];
+  options = options
+      .map((option) => {
+        if (typeof option === "string") return option.trim();
+        if (option && typeof option.text === "string") return option.text.trim();
+        return "";
+      })
+      .filter(Boolean)
+      .filter((value, index, arr) => arr.findIndex((item) =>
+        item.toLowerCase() === value.toLowerCase()) === index)
+      .slice(0, 8);
+
+  const answerType = VALID_ANSWER_TYPES.has(payload.answerType) ?
+    payload.answerType : (options.length ? "single-choice" : "text");
+
+  const expectedOptionCount = Math.max(0, Math.min(8,
+      toInt(payload.expectedOptionCount, options.length)));
+
+  return {
+    phaseNumber: Math.max(1, Math.min(12,
+        toInt(payload.phaseNumber, fallbackPhaseNumber))),
+    questionIndex: Math.max(1, toInt(payload.questionIndex, 1)),
+    stepId: typeof payload.stepId === "string" ? payload.stepId : "",
+    question: cleanQuestion,
+    answerType,
+    expectedOptionCount,
+    options,
+  };
+};
+
+const normalizeProctorResponse = (raw, fallbackPhaseNumber) => {
+  const parsed = (raw && typeof raw === "object") ? raw : {};
+  const proctorMessage = typeof parsed.proctorMessage === "string" &&
+    parsed.proctorMessage.trim() ?
+    parsed.proctorMessage.trim() : "The Proctor pauses, awaiting your reply.";
+
+  const systemUpdates = (parsed.systemUpdates && typeof parsed.systemUpdates === "object") ?
+    parsed.systemUpdates : {};
+
+  const assessment = normalizeAssessment(
+      parsed.assessment,
+      toInt(systemUpdates.nextPhaseNumber, fallbackPhaseNumber),
+  );
+
+  if (!assessment.question) {
+    assessment.question = proctorMessage;
+  }
+  if (assessment.answerType !== "text" && assessment.options.length === 0) {
+    assessment.answerType = "text";
+  }
+
+  return {proctorMessage, assessment, systemUpdates};
+};
+
 exports.strixhavenConsultant = onCall(
     {secrets: ["GEMINI_API_KEY"]},
     async (request) => {
@@ -133,7 +234,16 @@ exports.strixhavenConsultant = onCall(
           throw lastError; 
         }
 
-        return JSON.parse(responseText);
+        const jsonCandidate = extractJsonCandidate(responseText);
+        let parsedResponse = {};
+        try {
+          parsedResponse = JSON.parse(jsonCandidate);
+        } catch (parseError) {
+          console.warn("Invalid JSON from model, falling back to message-only payload.");
+          parsedResponse = {proctorMessage: responseText};
+        }
+
+        return normalizeProctorResponse(parsedResponse, gameData.phase || 1);
 
       } catch (error) {
         console.error("Proctor Error:", error);

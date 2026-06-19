@@ -226,6 +226,18 @@
       { name: "Unseen Servant", level: "1st-level", classes: ["Bard","Warlock","Wizard"] }
     ];
 
+    const PHASE_OPTION_FALLBACKS = {
+      1: ["The Physical Pioneer", "The Intellectual Observer", "The Social Conduit", "The Resilient Survivor"],
+      2: ["Through Raw, Unchecked Power", "Through Meticulous Study", "Through Creative Expression", "Through Tactical Intervention"],
+      3: ["Art (Prismari)", "Math/Law (Quandrix)", "History (Lorehold)", "Social force (Silverquill)", "Life (Witherbloom)"],
+      5: ["Option A", "Option B", "Option C"],
+      8: ["Destruction", "Control", "Harmony"],
+      9: ["Talking", "Secrets", "Heavy lifting"],
+      10: ["Option A", "Option B", "Option C"]
+    };
+
+    const OPTION_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
     function App() {
       const [isAuthenticated, setIsAuthenticated] = useState(false);
       const [loginMode, setLoginMode] = useState('new'); 
@@ -240,6 +252,16 @@
       const [chatHistory, setChatHistory] = useState([]);
       const [chatInput, setChatInput] = useState('');
       const [isChatLoading, setIsChatLoading] = useState(false);
+      const [isSheetDrawerOpen, setIsSheetDrawerOpen] = useState(false);
+      const [assessmentState, setAssessmentState] = useState({
+        phaseNumber: 1,
+        questionIndex: 1,
+        stepId: "phase-1-q1",
+        question: "Welcome to Strixhaven. Begin when ready.",
+        answerType: "text",
+        expectedOptionCount: 0,
+        options: []
+      });
       const chatEndRef = useRef(null);
       const hasInitialized = useRef(false);
 
@@ -289,6 +311,7 @@
 
       const getGameDataForPhase = (phaseNum) => {
         return { 
+          phase: phaseNum,
           lineages: LINEAGES, 
           classes: CLASSES, 
           colleges: COLLEGES, 
@@ -296,6 +319,119 @@
           currentClass: selectedClass,
           spellsByResonance: SPELLS_BY_RESONANCE
         };
+      };
+
+      const extractInlineOptions = (message) => {
+        if (!message || typeof message !== "string") return [];
+        const collected = [];
+        const regex = /(?:^|\s)([A-H])[)\].:-]\s*([^]+?)(?=(?:\s+[A-H][)\].:-]\s*)|$)/gi;
+        let match;
+        while ((match = regex.exec(message)) !== null) {
+          const optionText = (match[2] || "").replace(/\s+/g, " ").trim();
+          if (optionText) collected.push(optionText);
+          if (collected.length >= 8) break;
+        }
+        return collected;
+      };
+
+      const sanitizeOptionText = (value) => {
+        if (typeof value !== "string") return "";
+        return value
+          .replace(/^\s*[A-H][)\].:-]\s*/i, "")
+          .replace(/\s+/g, " ")
+          .trim();
+      };
+
+      const normalizeAssessmentPayload = (response, fallbackPhase) => {
+        const rawAssessment = response && typeof response.assessment === "object" ? response.assessment : {};
+        const rawQuestion = typeof rawAssessment.question === "string" ? rawAssessment.question.trim() : "";
+        const proctorMessage = typeof response?.proctorMessage === "string" ? response.proctorMessage.trim() : "";
+        const question = rawQuestion || proctorMessage || "The Proctor awaits your answer.";
+
+        let options = Array.isArray(rawAssessment.options) ? rawAssessment.options : [];
+        options = options
+          .map(opt => typeof opt === "string" ? opt : (opt && typeof opt.text === "string" ? opt.text : ""))
+          .map(sanitizeOptionText)
+          .filter(Boolean);
+
+        if (!options.length) {
+          options = extractInlineOptions(question);
+        }
+
+        const fallbackOptions = PHASE_OPTION_FALLBACKS[fallbackPhase] || [];
+        const expectedOptionCount = Number.isFinite(Number(rawAssessment.expectedOptionCount))
+          ? Math.max(0, Math.min(8, Number(rawAssessment.expectedOptionCount)))
+          : (options.length || fallbackOptions.length || 0);
+
+        const seen = new Set();
+        const deduped = [];
+        for (const option of options) {
+          const key = option.toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            deduped.push(option);
+          }
+        }
+
+        let normalizedOptions = deduped;
+        if (expectedOptionCount > 0 && normalizedOptions.length < expectedOptionCount) {
+          for (const fallback of fallbackOptions) {
+            const cleanFallback = sanitizeOptionText(fallback);
+            if (!cleanFallback) continue;
+            const key = cleanFallback.toLowerCase();
+            if (!seen.has(key)) {
+              normalizedOptions.push(cleanFallback);
+              seen.add(key);
+            }
+            if (normalizedOptions.length >= expectedOptionCount) break;
+          }
+        }
+
+        if (expectedOptionCount > 0 && normalizedOptions.length > expectedOptionCount) {
+          normalizedOptions = normalizedOptions.slice(0, expectedOptionCount);
+        }
+
+        if (!normalizedOptions.length && fallbackOptions.length && (!rawAssessment.answerType || rawAssessment.answerType !== "text")) {
+          normalizedOptions = fallbackOptions.slice(0, 5).map(sanitizeOptionText).filter(Boolean);
+        }
+
+        const answerType = ["single-choice", "multi-choice", "text"].includes(rawAssessment.answerType)
+          ? rawAssessment.answerType
+          : (normalizedOptions.length ? "single-choice" : "text");
+
+        const hasQuestionIndex = Number.isFinite(Number(rawAssessment.questionIndex));
+        const phaseNumber = Number.isFinite(Number(rawAssessment.phaseNumber))
+          ? Math.max(1, Math.min(12, Number(rawAssessment.phaseNumber)))
+          : fallbackPhase;
+
+        return {
+          phaseNumber,
+          questionIndex: hasQuestionIndex ? Math.max(1, Number(rawAssessment.questionIndex)) : null,
+          hasQuestionIndex,
+          stepId: typeof rawAssessment.stepId === "string" && rawAssessment.stepId.trim()
+            ? rawAssessment.stepId.trim()
+            : `phase-${phaseNumber}-q`,
+          question,
+          answerType: normalizedOptions.length ? answerType : "text",
+          expectedOptionCount,
+          options: normalizedOptions
+        };
+      };
+
+      const applyAssessmentFromResponse = (response, fallbackPhase) => {
+        const normalized = normalizeAssessmentPayload(response, fallbackPhase);
+        setAssessmentState(prev => {
+          const phaseNumber = normalized.phaseNumber || fallbackPhase;
+          const questionIndex = phaseNumber === prev.phaseNumber
+            ? prev.questionIndex + 1
+            : 1;
+          return {
+            ...normalized,
+            phaseNumber,
+            questionIndex: normalized.hasQuestionIndex ? normalized.questionIndex : questionIndex,
+            stepId: normalized.stepId || `phase-${phaseNumber}-q${questionIndex}`
+          };
+        });
       };
 
       const loadStudentData = (data) => {
@@ -327,6 +463,14 @@
         if (data.flaw) setFlaw(data.flaw);
         if (data.characterName) setCharacterName(data.characterName);
         if (data.backstory) setBackstory(data.backstory);
+
+        const loadedPhase = Math.max(1, Math.min(12, Number(data.phase) || 1));
+        const history = Array.isArray(data.chatHistory) ? data.chatHistory : [];
+        const latestProctor = [...history].reverse().find(msg => msg.role === "proctor");
+        applyAssessmentFromResponse({
+          proctorMessage: latestProctor?.text || "Resume your entrance exam when ready.",
+          assessment: { phaseNumber: loadedPhase }
+        }, loadedPhase);
       };
 
       const applySystemUpdates = (updates) => {
@@ -358,6 +502,15 @@
         if (updates.flaw != null) setFlaw(updates.flaw);
         if (updates.characterName != null) setCharacterName(updates.characterName);
         if (updates.backstory != null) setBackstory(updates.backstory);
+
+        if (updates.nextPhaseNumber != null) {
+          const clampedPhase = Math.max(1, Math.min(12, updates.nextPhaseNumber));
+          setAssessmentState(prev => ({
+            ...prev,
+            phaseNumber: clampedPhase,
+            questionIndex: prev.phaseNumber === clampedPhase ? prev.questionIndex : 1
+          }));
+        }
       };
 
       useEffect(() => {
@@ -411,8 +564,14 @@
             const proctorMsg = response.proctorMessage || response.response || "Welcome to the Strixhaven Biblioplex.";
             setChatHistory([{ role: 'proctor', text: proctorMsg }]);
             if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
+            applyAssessmentFromResponse(response, 1);
           } catch (err) {
-            setChatHistory([{ role: 'proctor', text: 'Welcome. I am your Admissions Proctor. How do you perceive your place in the multiverse? A) Physical Pioneer B) Intellectual Observer C) Social Conduit D) Resilient Survivor' }]);
+            const fallbackMessage = 'Welcome. I am your Admissions Proctor. How do you perceive your place in the multiverse? A) The Physical Pioneer B) The Intellectual Observer C) The Social Conduit D) The Resilient Survivor';
+            setChatHistory([{ role: 'proctor', text: fallbackMessage }]);
+            applyAssessmentFromResponse({
+              proctorMessage: fallbackMessage,
+              assessment: { phaseNumber: 1, answerType: "single-choice", expectedOptionCount: 4 }
+            }, 1);
           }
           setIsChatLoading(false);
         };
@@ -506,9 +665,10 @@ ${backstory}
         document.body.removeChild(link);
       };
 
-      const handleChatSubmit = async () => {
-        if (!chatInput.trim() || isChatLoading) return;
-        const userMsg = chatInput.trim();
+      const handleChatSubmit = async (inputOverride = null) => {
+        if (isChatLoading) return;
+        const userMsg = (inputOverride != null ? inputOverride : chatInput).trim();
+        if (!userMsg) return;
         setChatInput('');
         const newHistory = [...chatHistory, { role: 'user', text: userMsg }];
         setChatHistory(newHistory);
@@ -521,68 +681,112 @@ ${backstory}
           const proctorMsg = response.proctorMessage || response.response || 'The Proctor nods thoughtfully...';
           setChatHistory(prev => [...prev, { role: 'proctor', text: proctorMsg }]);
           if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
+          applyAssessmentFromResponse(response, response?.systemUpdates?.nextPhaseNumber || phase);
         } catch {
-          setChatHistory(prev => [...prev, { role: 'proctor', text: 'The Biblioplex archives are currently unreachable. Please try again later.' }]);
+          const fallbackMessage = 'The Biblioplex archives are currently unreachable. Please type your answer manually and retry.';
+          setChatHistory(prev => [...prev, { role: 'proctor', text: fallbackMessage }]);
+          applyAssessmentFromResponse({
+            proctorMessage: fallbackMessage,
+            assessment: { phaseNumber: phase, answerType: "text", expectedOptionCount: 0, options: [] }
+          }, phase);
         }
         setIsChatLoading(false);
       };
 
-      const renderChat = () => (
-        <>
-          <div className="flex-1 overflow-y-auto space-y-3 pr-1">
-            {chatHistory.map((msg, i) => (
-              <div key={i} className={`flex items-start ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {msg.role === 'proctor' && (
-                  <div className="w-6 h-6 rounded-full bg-indigo-900 border border-indigo-500/40 flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
-                    <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
-                  </div>
-                )}
-                <div className={`max-w-[80%] px-3 py-2 rounded-xl text-xs leading-relaxed whitespace-pre-wrap ${
-                  msg.role === 'user'
-                    ? 'bg-amber-500/20 border border-amber-500/30 text-amber-100 rounded-tr-sm'
-                    : 'bg-indigo-950/60 border border-indigo-500/20 text-indigo-100 rounded-tl-sm'
-                }`}>
-                  {msg.role === 'proctor' && <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Proctor</span>}
-                  {msg.text}
+      const renderAssessmentPanel = () => {
+        const optionPalette = [
+          "from-indigo-600/30 to-indigo-700/20 border-indigo-400/50 text-indigo-100",
+          "from-violet-600/30 to-violet-700/20 border-violet-400/50 text-violet-100",
+          "from-emerald-600/30 to-emerald-700/20 border-emerald-400/50 text-emerald-100",
+          "from-amber-600/30 to-amber-700/20 border-amber-400/60 text-amber-100",
+          "from-rose-600/30 to-rose-700/20 border-rose-400/50 text-rose-100"
+        ];
+
+        return (
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="bg-gradient-to-br from-slate-900 to-indigo-950 border border-indigo-500/30 rounded-2xl shadow-2xl p-4 md:p-6 flex-shrink-0">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-indigo-300 font-semibold">
+                  Phase {assessmentState.phaseNumber} • Question {assessmentState.questionIndex}
                 </div>
-                {msg.role === 'user' && (
-                  <div className="w-6 h-6 rounded-full bg-amber-900 border border-amber-500/40 flex items-center justify-center ml-2 flex-shrink-0 mt-0.5">
-                    <i className="fa-solid fa-user-graduate text-amber-400 text-[8px]"></i>
-                  </div>
-                )}
-              </div>
-            ))}
-            {isChatLoading && (
-              <div className="flex items-start">
-                <div className="w-6 h-6 rounded-full bg-indigo-900 border border-indigo-500/40 flex items-center justify-center mr-2 flex-shrink-0 mt-0.5">
-                  <i className="fa-solid fa-hat-wizard text-indigo-400 text-[8px]"></i>
-                </div>
-                <div className="bg-indigo-950/60 border border-indigo-500/20 px-3 py-2 rounded-xl rounded-tl-sm text-xs text-indigo-300 italic">
-                  <i className="fa-solid fa-ellipsis fa-fade mr-1 text-indigo-400"></i>Proctor is writing...
+                <div className="text-[11px] px-2.5 py-1 rounded-full border border-amber-400/40 bg-amber-500/10 text-amber-300 font-bold">
+                  Entrance Assessment
                 </div>
               </div>
-            )}
-            <div ref={chatEndRef} />
+
+              <div className="text-xl md:text-2xl leading-tight font-semibold text-white mb-5">
+                {assessmentState.question}
+              </div>
+
+              {assessmentState.options.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {assessmentState.options.map((option, index) => (
+                    <button
+                      key={`${option}-${index}`}
+                      onClick={() => handleChatSubmit(option)}
+                      disabled={isChatLoading}
+                      className={`text-left rounded-xl px-4 py-3 border bg-gradient-to-r shadow-lg transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed ${optionPalette[index % optionPalette.length]}`}
+                    >
+                      <span className="text-[11px] uppercase font-bold tracking-wider block mb-1 opacity-90">
+                        {OPTION_LETTERS[index] || `${index + 1}`}
+                      </span>
+                      <span className="text-sm md:text-base font-medium">{option}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {assessmentState.options.length === 0 && (
+                <p className="text-sm text-indigo-200/90 bg-indigo-500/10 border border-indigo-400/30 rounded-xl p-3">
+                  No stable option list available for this step. Provide your answer in free text below.
+                </p>
+              )}
+            </div>
+
+            <div className="mt-4 bg-slate-900/70 border border-slate-700/60 rounded-xl p-3 overflow-y-auto min-h-0 flex-1">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2 font-semibold">Transcript</p>
+              <div className="space-y-2 pr-1">
+                {chatHistory.slice(-8).map((msg, i) => (
+                  <div key={i} className={`text-sm rounded-lg px-3 py-2 border ${
+                    msg.role === "user"
+                      ? "bg-amber-500/10 border-amber-500/30 text-amber-100"
+                      : "bg-indigo-500/10 border-indigo-500/30 text-indigo-100"
+                  }`}>
+                    <span className="text-[10px] uppercase font-bold tracking-[0.18em] opacity-80 block mb-1">
+                      {msg.role === "user" ? "You" : "Proctor"}
+                    </span>
+                    <span className="whitespace-pre-wrap leading-relaxed">{msg.text}</span>
+                  </div>
+                ))}
+                {isChatLoading && (
+                  <div className="text-sm rounded-lg px-3 py-2 border bg-indigo-500/10 border-indigo-500/30 text-indigo-200 italic">
+                    <i className="fa-solid fa-ellipsis fa-fade mr-1"></i>Proctor is preparing the next prompt...
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+            </div>
+
+            <div className="flex gap-2 mt-4 pt-2 flex-shrink-0">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
+                placeholder="Type your answer if needed..."
+                className="flex-1 bg-slate-950 border border-indigo-700/60 rounded-lg px-4 py-3 text-sm text-indigo-100 focus:border-indigo-400 outline-none placeholder:text-indigo-700"
+              />
+              <button
+                onClick={() => handleChatSubmit()}
+                disabled={isChatLoading || !chatInput.trim()}
+                className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-sm font-semibold shadow transition-all whitespace-nowrap"
+              >
+                {isChatLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-paper-plane mr-2"></i>Submit</>}
+              </button>
+            </div>
           </div>
-          <div className="flex gap-2 mt-3 pt-3 border-t border-indigo-900/40 flex-shrink-0">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
-              placeholder="Speak to the Admissions Proctor..."
-              className="flex-1 bg-slate-950 border border-indigo-900/50 rounded-lg px-3 py-2 text-xs text-indigo-100 focus:border-indigo-500 outline-none placeholder:text-indigo-800"
-            />
-            <button
-              onClick={handleChatSubmit}
-              disabled={isChatLoading || !chatInput.trim()}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow transition-all whitespace-nowrap"
-            >
-              {isChatLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-paper-plane mr-1"></i>Send</>}
-            </button>
-          </div>
-        </>
-      );
+        );
+      };
 
       const renderSheet = () => {
         const cls = CLASSES[selectedClass] || { name: "Student" };
@@ -818,59 +1022,82 @@ ${backstory}
       }
 
       return (
-        <div className="flex flex-col lg:flex-row h-screen relative z-10 bg-slate-950">
-          <section className="w-full lg:w-1/2 border-r border-slate-800 flex flex-col bg-slate-900/40 overflow-hidden">
-            <div className="px-4 md:px-6 pt-4 md:pt-6 flex-shrink-0">
-              <header className="mb-4 border-b border-amber-500/30 pb-4 flex justify-between items-start">
-                <div>
-                  <h1 className="text-xl font-bold tracking-wider text-amber-400 font-serif">
-                    <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN
-                  </h1>
-                  <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">
-                    Proctor Exam - Phase {phase} of 12
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-[10px] text-slate-500 uppercase block">Student ID</span>
-                  <span className="text-xs font-bold text-indigo-400">{portalUsername}</span>
-                </div>
-              </header>
-              <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2 mb-4">
-                <div className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full transition-all duration-500" style={{ width: `${(phase / 12) * 100}%` }}></div>
+        <div className="h-screen relative z-10 bg-gradient-to-b from-slate-950 via-slate-950 to-indigo-950 text-slate-100 overflow-hidden">
+          <header className="px-4 md:px-6 py-4 border-b border-indigo-800/40 bg-slate-950/80 backdrop-blur-md flex items-center justify-between">
+            <button
+              onClick={() => setIsSheetDrawerOpen(true)}
+              className="w-10 h-10 rounded-lg border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all text-indigo-200"
+              aria-label="Open character sheet"
+            >
+              <i className="fa-solid fa-bars"></i>
+            </button>
+
+            <div className="text-center">
+              <h1 className="text-xl md:text-2xl font-bold tracking-wider text-amber-400 font-serif">
+                <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN
+              </h1>
+              <p className="text-[11px] text-slate-400 tracking-[0.2em] uppercase mt-0.5">
+                Proctor Exam • Phase {phase} of 12
+              </p>
+            </div>
+
+            <div className="text-right">
+              <span className="text-[10px] text-slate-500 uppercase block">Student ID</span>
+              <span className="text-xs font-bold text-indigo-300">{portalUsername}</span>
+            </div>
+          </header>
+
+          <main className="h-[calc(100vh-81px)] px-4 md:px-6 py-4 md:py-6 flex justify-center">
+            <div className="w-full max-w-5xl flex flex-col min-h-0">
+              <div className="w-full bg-slate-800/80 h-2 rounded-full overflow-hidden mb-4 border border-slate-700/70">
+                <div className="bg-gradient-to-r from-indigo-500 via-violet-500 to-amber-500 h-full transition-all duration-500" style={{ width: `${(phase / 12) * 100}%` }}></div>
               </div>
+              {renderAssessmentPanel()}
             </div>
+          </main>
 
-            <div className="flex-1 flex flex-col overflow-hidden px-4 md:px-6 pb-4 pt-1">
-              {renderChat()}
-            </div>
-
-            <div className="flex-shrink-0 px-4 md:px-6 py-4 border-t border-slate-800/80 flex justify-end gap-3">
-              <button onClick={downloadCharacterSheet} className="px-5 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
-                <i className="fa-solid fa-file-arrow-down mr-2"></i>Download
+          <div className={`fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity z-40 ${isSheetDrawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+            onClick={() => setIsSheetDrawerOpen(false)}
+          />
+          <aside className={`fixed top-0 left-0 h-full w-[min(92vw,520px)] bg-slate-900 border-r border-indigo-700/50 shadow-2xl z-50 transition-transform duration-300 ${isSheetDrawerOpen ? "translate-x-0" : "-translate-x-full"} flex flex-col`}>
+            <div className="px-4 py-3 border-b border-slate-700/70 flex items-center justify-between">
+              <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-indigo-200">Character Sheet</h2>
+              <button
+                onClick={() => setIsSheetDrawerOpen(false)}
+                className="w-8 h-8 rounded-md border border-slate-700 text-slate-300 hover:text-white hover:border-indigo-400 transition-all"
+                aria-label="Close character sheet"
+              >
+                <i className="fa-solid fa-xmark"></i>
               </button>
-              <button onClick={() => submitToFirebase(false)} disabled={isSaving} className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
-                <i className="fa-solid fa-cloud-arrow-up mr-2"></i>{isSaving ? "Syncing..." : "Force Sync"}
-              </button>
             </div>
-          </section>
 
-          <section className="w-full lg:w-1/2 p-4 md:p-6 bg-slate-800/30 flex flex-col gap-3 overflow-y-auto">
-            <div className="flex gap-2 border-b border-slate-800 pb-3">
+            <div className="px-4 pt-3 pb-2 flex gap-2 border-b border-slate-800 flex-wrap">
               {[{ id: 1, label: "Core Stats" }, { id: 2, label: "Backstory" }, { id: 3, label: "Spellbook" }, { id: 4, label: "Campus" }].map(tab => (
-                <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-800 hover:border-amber-500/40"}`}>
+                <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-700 hover:border-amber-500/40"}`}>
                   {tab.label}
                 </button>
               ))}
             </div>
-            <div className="flex-1 bg-[#fdfaf2] text-[#2c2214] p-5 rounded-2xl border-4 border-[#ded1ba] overflow-y-auto shadow-inner">
-              {renderSheet()}
+
+            <div className="flex-1 p-4 overflow-y-auto">
+              <div className="h-full bg-[#fdfaf2] text-[#2c2214] p-5 rounded-2xl border-4 border-[#ded1ba] overflow-y-auto shadow-inner">
+                {renderSheet()}
+              </div>
             </div>
-          </section>
 
-          <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.8.0 - Full Campus Life Integration
+            <div className="px-4 py-3 border-t border-slate-700/80 flex gap-2 justify-end">
+              <button onClick={downloadCharacterSheet} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
+                <i className="fa-solid fa-file-arrow-down mr-2"></i>Download
+              </button>
+              <button onClick={() => submitToFirebase(false)} disabled={isSaving} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-lg transition-all">
+                <i className="fa-solid fa-cloud-arrow-up mr-2"></i>{isSaving ? "Syncing..." : "Force Sync"}
+              </button>
+            </div>
+          </aside>
+
+          <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-30 opacity-50">
+            v1.9.0 - Assessment Card + Drawer UI
           </div>
-
         </div>
       );
     }
