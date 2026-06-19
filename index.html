@@ -228,13 +228,13 @@
 
     const OPTION_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const MAX_TRANSCRIPT_ENTRIES = 8;
-    const CUSTOM_INPUT_OPTIONS = [
+    const CUSTOM_INPUT_TRIGGERS = new Set([
       "i have questions",
       "other",
       "something else",
       "custom reply",
       "type my answer"
-    ];
+    ]);
 
     function App() {
       const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -356,7 +356,7 @@
 
       const shouldOpenCustomInput = (value) => {
         const normalized = sanitizeOptionText(value).toLowerCase();
-        return CUSTOM_INPUT_OPTIONS.includes(normalized);
+        return CUSTOM_INPUT_TRIGGERS.has(normalized);
       };
 
       const stripInlineOptions = (text) => {
