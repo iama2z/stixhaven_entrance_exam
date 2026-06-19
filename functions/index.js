@@ -17,6 +17,7 @@ Rules of Engagement:
 * Revisions & Changing Minds: If a student wants to change a previous choice (e.g., changing armor from medium to light), YOU MUST ALLOW IT. Enthusiastically confirm the change, update the specific JSON key, but DO NOT advance the 'nextPhaseNumber'. 
 * Grimoire Assistance: If the student says they are missing spells or asks for help filling empty slots, DO NOT tell them their profile is complete. Suggest specific missing Cantrips or 1st-level spells and append them to the 'selectedSpells' JSON array.
 * Two-Step Selection: Do not be lazy. If an option contains a sub-list (e.g., Bard, Druid), you MUST explicitly ask the user to pick one from that sub-list. Do NOT auto-assign.
+* Exact Options Only: Whenever a question has selectable answers, fill "assessment.options" with the exact valid answers for THAT question (including follow-up sub-options like Human, Tiefling, Halfling, Aasimar). Never use placeholders like "Option A" or repeat a previous question's category labels. If you cannot provide exact choices, set "answerType" to "text" and leave "options" empty.
 
 The 12-Phase Exam Script:
 Phase 1: Core Lineage & Size Selection - "How do you perceive your place in the multiverse?" A) The Physical Pioneer (Options: Owlin) B) The Intellectual Observer (Options: Elf, Gnome) C) The Social Conduit (Options: Human, Tiefling, Halfling, Aasimar) D) The Resilient Survivor (Options: Dwarf, Orc). 
@@ -109,6 +110,19 @@ const toInt = (value, fallback) => {
   return Number.isFinite(parsed) ? parsed : fallback;
 };
 
+const sanitizeOptionText = (value) => {
+  if (typeof value !== "string") return "";
+  return value
+      .replace(/^\s*[A-Ha-h][)\].:-]\s*/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+};
+
+const isGenericPlaceholderOption = (value) => {
+  const normalized = sanitizeOptionText(value).toLowerCase();
+  return /^(option|choice|answer)\s+[a-z0-9]+$/.test(normalized);
+};
+
 const extractJsonCandidate = (rawText) => {
   if (!rawText || typeof rawText !== "string") return "{}";
   const trimmed = rawText.trim();
@@ -134,11 +148,14 @@ const normalizeAssessment = (assessment, fallbackPhaseNumber) => {
   const seen = new Set();
   options = options
       .map((option) => {
-        if (typeof option === "string") return option.trim();
-        if (option && typeof option.text === "string") return option.text.trim();
+        if (typeof option === "string") return sanitizeOptionText(option);
+        if (option && typeof option.text === "string") {
+          return sanitizeOptionText(option.text);
+        }
         return "";
       })
       .filter(Boolean)
+      .filter((value) => !isGenericPlaceholderOption(value))
       .filter((value) => {
         const key = value.toLowerCase();
         if (seen.has(key)) return false;
