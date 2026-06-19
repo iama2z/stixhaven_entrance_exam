@@ -704,20 +704,23 @@ ${backstory}
         document.body.removeChild(link);
       };
 
-      const handleChatSubmit = async (inputOverride = null) => {
+      const handleChatSubmit = async (inputOverride = null, config = {}) => {
         if (isChatLoading) return;
+        const { persistUserMessage = true } = config;
         const userMsg = (inputOverride != null ? inputOverride : chatInput).trim();
         if (!userMsg) return;
         setIsCustomInputOpen(false);
         setChatInput('');
-        const newHistory = [...chatHistory, { role: 'user', text: userMsg }];
-        setChatHistory(newHistory);
+        const nextHistory = [...chatHistory, { role: 'user', text: userMsg }];
+        if (persistUserMessage) {
+          setChatHistory(nextHistory);
+        }
         setIsChatLoading(true);
 
         submitToFirebase(true);
 
         try {
-          const response = await window.askAdmissionsAI(newHistory, userMsg, getGameDataForPhase(phase));
+          const response = await window.askAdmissionsAI(nextHistory, userMsg, getGameDataForPhase(phase));
           const proctorMsg = response.proctorMessage || response.response || 'The Proctor nods thoughtfully...';
           setChatHistory(prev => [...prev, { role: 'proctor', text: proctorMsg }]);
           if (response.systemUpdates) applySystemUpdates(response.systemUpdates);
@@ -731,6 +734,14 @@ ${backstory}
           }, phase);
         }
         setIsChatLoading(false);
+      };
+
+      const handleGenerateNameOptions = () => {
+        if (isChatLoading || assessmentState.phaseNumber !== 12) return;
+        handleChatSubmit(
+          "Please generate 4 unique, clickable name options for my character. Do not finalize my paperwork yet, and do not set my character name until I choose one.",
+          { persistUserMessage: false }
+        );
       };
 
       const handleOptionSelect = (option) => {
@@ -751,6 +762,7 @@ ${backstory}
           "from-rose-600/30 to-rose-700/20 border-rose-400/50 text-rose-100"
         ];
         const shouldShowChatComposer = assessmentState.answerType === "text" || isCustomInputOpen;
+        const shouldShowNameGenerator = assessmentState.phaseNumber === 12 && !characterName;
         const chatPlaceholder = isCustomInputOpen
           ? "Type your question for the proctor..."
           : "Type your answer...";
@@ -770,6 +782,23 @@ ${backstory}
               <div className="text-xl md:text-2xl leading-tight font-semibold text-white mb-5">
                 {assessmentState.question}
               </div>
+
+              {shouldShowNameGenerator && (
+                <div className="mb-5 flex flex-wrap items-center gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3">
+                  <div className="flex-1 min-w-[220px]">
+                    <p className="text-sm font-semibold text-amber-100">Need a name suggestion?</p>
+                    <p className="text-xs text-amber-200/75 mt-1">Generate four AI name options, or ignore them and type your own.</p>
+                  </div>
+                  <button
+                    onClick={handleGenerateNameOptions}
+                    disabled={isChatLoading}
+                    className="px-4 py-2 rounded-lg border border-amber-400/40 bg-amber-500/20 hover:bg-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-amber-100 text-sm font-semibold transition-all whitespace-nowrap"
+                  >
+                    {isChatLoading ? <i className="fa-solid fa-spinner fa-spin mr-2"></i> : <i className="fa-solid fa-dice mr-2"></i>}
+                    Generate 4 names
+                  </button>
+                </div>
+              )}
 
               {assessmentState.options.length > 0 && (
                 <div className="space-y-3">
@@ -1063,7 +1092,7 @@ ${backstory}
                     <i className="fa-solid fa-ellipsis fa-fade mr-1"></i>Proctor is preparing the next prompt...
                   </div>
                 )}
-                <div ref={questionsEndRef} />
+                <div ref={chatEndRef} />
               </div>
             </div>
           );
@@ -1242,7 +1271,7 @@ ${backstory}
                   </div>
                 )}
 
-                <div ref={chatEndRef} />
+                <div ref={questionsEndRef} />
               </div>
             </div>
 
