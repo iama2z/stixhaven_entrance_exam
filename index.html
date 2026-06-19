@@ -226,16 +226,6 @@
       { name: "Unseen Servant", level: "1st-level", classes: ["Bard","Warlock","Wizard"] }
     ];
 
-    const PHASE_OPTION_FALLBACKS = {
-      1: ["The Physical Pioneer", "The Intellectual Observer", "The Social Conduit", "The Resilient Survivor"],
-      2: ["Through Raw, Unchecked Power", "Through Meticulous Study", "Through Creative Expression", "Through Tactical Intervention"],
-      3: ["Art (Prismari)", "Math/Law (Quandrix)", "History (Lorehold)", "Social force (Silverquill)", "Life (Witherbloom)"],
-      5: ["Option A", "Option B", "Option C"],
-      8: ["Destruction", "Control", "Harmony"],
-      9: ["Talking", "Secrets", "Heavy lifting"],
-      10: ["Option A", "Option B", "Option C"]
-    };
-
     const OPTION_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const MAX_TRANSCRIPT_ENTRIES = 8;
 
@@ -253,6 +243,7 @@
       const [chatHistory, setChatHistory] = useState([]);
       const [chatInput, setChatInput] = useState('');
       const [isChatLoading, setIsChatLoading] = useState(false);
+      const [isCustomInputOpen, setIsCustomInputOpen] = useState(false);
       const [isSheetDrawerOpen, setIsSheetDrawerOpen] = useState(false);
       const [assessmentState, setAssessmentState] = useState({
         phaseNumber: 1,
@@ -264,6 +255,7 @@
         expectedOptionCount: 0,
         options: []
       });
+      const chatInputRef = useRef(null);
       const chatEndRef = useRef(null);
       const hasInitialized = useRef(false);
 
@@ -349,6 +341,17 @@
         return /^(option|choice|answer)\s+[a-z0-9]+$/.test(normalized);
       };
 
+      const isCustomInputOption = (value) => {
+        const normalized = sanitizeOptionText(value).toLowerCase();
+        return [
+          "i have questions",
+          "other",
+          "something else",
+          "custom reply",
+          "type my answer"
+        ].includes(normalized);
+      };
+
       const stripInlineOptions = (text) => {
         if (!text || typeof text !== "string") return text || "";
         // Match uppercase option markers (A) B) etc.); require index > 0 to preserve question text before options
@@ -377,16 +380,10 @@
           .filter(opt => !isGenericPlaceholderOption(opt));
 
         let options = explicitOptions.length ? explicitOptions : inlineOptions;
-        const baseOptionCount = options.length;
-
-        const fallbackOptions = (PHASE_OPTION_FALLBACKS[fallbackPhase] || [])
-          .map(sanitizeOptionText)
-          .filter(Boolean)
-          .filter(opt => !isGenericPlaceholderOption(opt));
         const parsedExpectedCount = Number(rawAssessment.expectedOptionCount);
         const expectedOptionCount = Number.isFinite(parsedExpectedCount)
           ? Math.max(0, Math.min(8, parsedExpectedCount))
-          : (options.length || fallbackOptions.length || 0);
+          : options.length;
 
         const seen = new Set();
         const deduped = [];
@@ -399,26 +396,9 @@
         }
 
         let normalizedOptions = deduped;
-        let usedPhaseFallback = false;
-        if (expectedOptionCount > 0 && normalizedOptions.length < expectedOptionCount) {
-          for (const fallback of fallbackOptions) {
-            const key = fallback.toLowerCase();
-            if (!seen.has(key)) {
-              normalizedOptions.push(fallback);
-              seen.add(key);
-              usedPhaseFallback = true;
-            }
-            if (normalizedOptions.length >= expectedOptionCount) break;
-          }
-        }
 
         if (expectedOptionCount > 0 && normalizedOptions.length > expectedOptionCount) {
           normalizedOptions = normalizedOptions.slice(0, expectedOptionCount);
-        }
-
-        if (!normalizedOptions.length && fallbackOptions.length && (!rawAssessment.answerType || rawAssessment.answerType !== "text")) {
-          normalizedOptions = fallbackOptions.slice(0, 5);
-          usedPhaseFallback = normalizedOptions.length > 0;
         }
 
         const answerType = ["single-choice", "multi-choice", "text"].includes(rawAssessment.answerType)
@@ -451,23 +431,20 @@
           proctorHint,
           answerType: normalizedOptions.length ? answerType : "text",
           expectedOptionCount,
-          options: normalizedOptions,
-          baseOptionCount,
-          usedPhaseFallback
+          options: normalizedOptions
         };
       };
 
       const applyAssessmentFromResponse = (response, fallbackPhase) => {
         const normalized = normalizeAssessmentPayload(response, fallbackPhase);
+        setIsCustomInputOpen(false);
         setAssessmentState(prev => {
           const phaseNumber = normalized.phaseNumber || fallbackPhase;
           const questionIndex = phaseNumber === prev.phaseNumber
             ? prev.questionIndex + 1
             : 1;
           const resolvedQuestionIndex = normalized.hasQuestionIndex ? normalized.questionIndex : questionIndex;
-          const resolvedOptions = normalized.usedPhaseFallback && resolvedQuestionIndex > 1
-            ? normalized.options.slice(0, normalized.baseOptionCount)
-            : normalized.options;
+          const resolvedOptions = normalized.options;
           const resolvedAnswerType = resolvedOptions.length >= 2 ? normalized.answerType : "text";
           return {
             ...normalized,
@@ -716,6 +693,7 @@ ${backstory}
         if (isChatLoading) return;
         const userMsg = (inputOverride != null ? inputOverride : chatInput).trim();
         if (!userMsg) return;
+        setIsCustomInputOpen(false);
         setChatInput('');
         const newHistory = [...chatHistory, { role: 'user', text: userMsg }];
         setChatHistory(newHistory);
@@ -740,6 +718,16 @@ ${backstory}
         setIsChatLoading(false);
       };
 
+      const handleOptionSelect = (option) => {
+        if (isChatLoading) return;
+        if (isCustomInputOption(option)) {
+          setIsCustomInputOpen(true);
+          window.requestAnimationFrame(() => chatInputRef.current?.focus());
+          return;
+        }
+        handleChatSubmit(option);
+      };
+
       const renderAssessmentPanel = () => {
         const optionPalette = [
           "from-indigo-600/30 to-indigo-700/20 border-indigo-400/50 text-indigo-100",
@@ -748,6 +736,10 @@ ${backstory}
           "from-amber-600/30 to-amber-700/20 border-amber-400/60 text-amber-100",
           "from-rose-600/30 to-rose-700/20 border-rose-400/50 text-rose-100"
         ];
+        const shouldShowChatComposer = assessmentState.answerType === "text" || isCustomInputOpen;
+        const chatPlaceholder = isCustomInputOpen
+          ? "Type your question for the proctor..."
+          : "Type your answer...";
 
         return (
           <div className="flex-1 flex flex-col min-h-0">
@@ -771,7 +763,7 @@ ${backstory}
                     {assessmentState.options.map((option, index) => (
                       <button
                         key={`${option}-${index}`}
-                        onClick={() => handleChatSubmit(option)}
+                        onClick={() => handleOptionSelect(option)}
                         disabled={isChatLoading}
                         className={`text-left rounded-xl px-4 py-3 border bg-gradient-to-r shadow-lg transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed ${optionPalette[index % optionPalette.length]}`}
                       >
@@ -782,9 +774,6 @@ ${backstory}
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-indigo-200/75 bg-indigo-500/10 border border-indigo-400/20 rounded-xl px-3 py-2">
-                    Prefer a custom reply? You can still type your answer below.
-                  </p>
                 </div>
               )}
 
@@ -825,23 +814,26 @@ ${backstory}
               </div>
             </div>
 
-            <div className="flex gap-2 mt-4 pt-2 flex-shrink-0">
-              <input
-                type="text"
-                value={chatInput}
-                onChange={e => setChatInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
-                placeholder="Type your answer if needed..."
-                className="flex-1 bg-slate-950 border border-indigo-700/60 rounded-lg px-4 py-3 text-sm text-indigo-100 focus:border-indigo-400 outline-none placeholder:text-indigo-700"
-              />
-              <button
-                onClick={() => handleChatSubmit()}
-                disabled={isChatLoading || !chatInput.trim()}
-                className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-sm font-semibold shadow transition-all whitespace-nowrap"
-              >
-                {isChatLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-paper-plane mr-2"></i>Submit</>}
-              </button>
-            </div>
+            {shouldShowChatComposer && (
+              <div className="flex gap-2 mt-4 pt-2 flex-shrink-0">
+                <input
+                  ref={chatInputRef}
+                  type="text"
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
+                  placeholder={chatPlaceholder}
+                  className="flex-1 bg-slate-950 border border-indigo-700/60 rounded-lg px-4 py-3 text-sm text-indigo-100 focus:border-indigo-400 outline-none placeholder:text-indigo-700"
+                />
+                <button
+                  onClick={() => handleChatSubmit()}
+                  disabled={isChatLoading || !chatInput.trim()}
+                  className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-lg text-sm font-semibold shadow transition-all whitespace-nowrap"
+                >
+                  {isChatLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-paper-plane mr-2"></i>Submit</>}
+                </button>
+              </div>
+            )}
           </div>
         );
       };
