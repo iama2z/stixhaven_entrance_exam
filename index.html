@@ -344,6 +344,11 @@
           .trim();
       };
 
+      const isGenericPlaceholderOption = (value) => {
+        const normalized = sanitizeOptionText(value).toLowerCase();
+        return /^(option|choice|answer)\s+[a-z0-9]+$/.test(normalized);
+      };
+
       const stripInlineOptions = (text) => {
         if (!text || typeof text !== "string") return text || "";
         // Match uppercase option markers (A) B) etc.); require index > 0 to preserve question text before options
@@ -360,17 +365,24 @@
         const proctorMessage = typeof response?.proctorMessage === "string" ? response.proctorMessage.trim() : "";
         const rawComposedQuestion = rawQuestion || proctorMessage || "The Proctor awaits your answer.";
 
-        let options = Array.isArray(rawAssessment.options) ? rawAssessment.options : [];
-        options = options
+        const explicitOptions = (Array.isArray(rawAssessment.options) ? rawAssessment.options : [])
           .map(opt => typeof opt === "string" ? opt : (opt && typeof opt.text === "string" ? opt.text : ""))
           .map(sanitizeOptionText)
-          .filter(Boolean);
+          .filter(Boolean)
+          .filter(opt => !isGenericPlaceholderOption(opt));
 
-        if (!options.length) {
-          options = extractInlineOptions(rawComposedQuestion);
-        }
+        const inlineOptions = extractInlineOptions(rawComposedQuestion)
+          .map(sanitizeOptionText)
+          .filter(Boolean)
+          .filter(opt => !isGenericPlaceholderOption(opt));
 
-        const fallbackOptions = PHASE_OPTION_FALLBACKS[fallbackPhase] || [];
+        let options = explicitOptions.length ? explicitOptions : inlineOptions;
+        const baseOptionCount = options.length;
+
+        const fallbackOptions = (PHASE_OPTION_FALLBACKS[fallbackPhase] || [])
+          .map(sanitizeOptionText)
+          .filter(Boolean)
+          .filter(opt => !isGenericPlaceholderOption(opt));
         const parsedExpectedCount = Number(rawAssessment.expectedOptionCount);
         const expectedOptionCount = Number.isFinite(parsedExpectedCount)
           ? Math.max(0, Math.min(8, parsedExpectedCount))
@@ -387,14 +399,14 @@
         }
 
         let normalizedOptions = deduped;
+        let usedPhaseFallback = false;
         if (expectedOptionCount > 0 && normalizedOptions.length < expectedOptionCount) {
           for (const fallback of fallbackOptions) {
-            const cleanFallback = sanitizeOptionText(fallback);
-            if (!cleanFallback) continue;
-            const key = cleanFallback.toLowerCase();
+            const key = fallback.toLowerCase();
             if (!seen.has(key)) {
-              normalizedOptions.push(cleanFallback);
+              normalizedOptions.push(fallback);
               seen.add(key);
+              usedPhaseFallback = true;
             }
             if (normalizedOptions.length >= expectedOptionCount) break;
           }
@@ -405,7 +417,8 @@
         }
 
         if (!normalizedOptions.length && fallbackOptions.length && (!rawAssessment.answerType || rawAssessment.answerType !== "text")) {
-          normalizedOptions = fallbackOptions.slice(0, 5).map(sanitizeOptionText).filter(Boolean);
+          normalizedOptions = fallbackOptions.slice(0, 5);
+          usedPhaseFallback = normalizedOptions.length > 0;
         }
 
         const answerType = ["single-choice", "multi-choice", "text"].includes(rawAssessment.answerType)
@@ -438,7 +451,9 @@
           proctorHint,
           answerType: normalizedOptions.length ? answerType : "text",
           expectedOptionCount,
-          options: normalizedOptions
+          options: normalizedOptions,
+          baseOptionCount,
+          usedPhaseFallback
         };
       };
 
@@ -449,11 +464,19 @@
           const questionIndex = phaseNumber === prev.phaseNumber
             ? prev.questionIndex + 1
             : 1;
+          const resolvedQuestionIndex = normalized.hasQuestionIndex ? normalized.questionIndex : questionIndex;
+          const resolvedOptions = normalized.usedPhaseFallback && resolvedQuestionIndex > 1
+            ? normalized.options.slice(0, normalized.baseOptionCount)
+            : normalized.options;
+          const resolvedAnswerType = resolvedOptions.length >= 2 ? normalized.answerType : "text";
           return {
             ...normalized,
             phaseNumber,
-            questionIndex: normalized.hasQuestionIndex ? normalized.questionIndex : questionIndex,
-            stepId: normalized.stepId || `phase-${phaseNumber}-q${questionIndex}`
+            questionIndex: resolvedQuestionIndex,
+            stepId: normalized.stepId || `phase-${phaseNumber}-q${questionIndex}`,
+            answerType: resolvedAnswerType,
+            expectedOptionCount: resolvedAnswerType === "text" ? 0 : normalized.expectedOptionCount,
+            options: resolvedOptions
           };
         });
       };
@@ -743,20 +766,25 @@ ${backstory}
               </div>
 
               {assessmentState.options.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {assessmentState.options.map((option, index) => (
-                    <button
-                      key={`${option}-${index}`}
-                      onClick={() => handleChatSubmit(option)}
-                      disabled={isChatLoading}
-                      className={`text-left rounded-xl px-4 py-3 border bg-gradient-to-r shadow-lg transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed ${optionPalette[index % optionPalette.length]}`}
-                    >
-                      <span className="text-[11px] uppercase font-bold tracking-wider block mb-1 opacity-90">
-                        {OPTION_LETTERS[index] || `${index + 1}`}
-                      </span>
-                      <span className="text-sm md:text-base font-medium">{option}</span>
-                    </button>
-                  ))}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {assessmentState.options.map((option, index) => (
+                      <button
+                        key={`${option}-${index}`}
+                        onClick={() => handleChatSubmit(option)}
+                        disabled={isChatLoading}
+                        className={`text-left rounded-xl px-4 py-3 border bg-gradient-to-r shadow-lg transition-all hover:scale-[1.01] disabled:opacity-50 disabled:cursor-not-allowed ${optionPalette[index % optionPalette.length]}`}
+                      >
+                        <span className="text-[11px] uppercase font-bold tracking-wider block mb-1 opacity-90">
+                          {OPTION_LETTERS[index] || `${index + 1}`}
+                        </span>
+                        <span className="text-sm md:text-base font-medium">{option}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-indigo-200/75 bg-indigo-500/10 border border-indigo-400/20 rounded-xl px-3 py-2">
+                    Prefer a custom reply? You can still type your answer below.
+                  </p>
                 </div>
               )}
 
