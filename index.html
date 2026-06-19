@@ -259,6 +259,7 @@
         questionIndex: 1,
         stepId: "phase-1-q1",
         question: "Welcome to Strixhaven. Begin when ready.",
+        proctorHint: "",
         answerType: "text",
         expectedOptionCount: 0,
         options: []
@@ -343,11 +344,20 @@
           .trim();
       };
 
+      const stripInlineOptions = (text) => {
+        if (!text || typeof text !== "string") return text || "";
+        const markers = [...text.matchAll(/\s+[A-H][).:-]\s/gi)];
+        if (markers.length >= 2 && markers[0].index > 0) {
+          return text.slice(0, markers[0].index).trim();
+        }
+        return text;
+      };
+
       const normalizeAssessmentPayload = (response, fallbackPhase) => {
         const rawAssessment = response && typeof response.assessment === "object" ? response.assessment : {};
         const rawQuestion = typeof rawAssessment.question === "string" ? rawAssessment.question.trim() : "";
         const proctorMessage = typeof response?.proctorMessage === "string" ? response.proctorMessage.trim() : "";
-        const question = rawQuestion || proctorMessage || "The Proctor awaits your answer.";
+        const rawComposedQuestion = rawQuestion || proctorMessage || "The Proctor awaits your answer.";
 
         let options = Array.isArray(rawAssessment.options) ? rawAssessment.options : [];
         options = options
@@ -356,7 +366,7 @@
           .filter(Boolean);
 
         if (!options.length) {
-          options = extractInlineOptions(question);
+          options = extractInlineOptions(rawComposedQuestion);
         }
 
         const fallbackOptions = PHASE_OPTION_FALLBACKS[fallbackPhase] || [];
@@ -406,6 +416,16 @@
           ? Math.max(1, Math.min(12, Number(rawAssessment.phaseNumber)))
           : fallbackPhase;
 
+        // Strip inline option labels (A) B) C) ...) from question text when option buttons are shown
+        const question = normalizedOptions.length >= 2
+          ? stripInlineOptions(rawComposedQuestion)
+          : rawComposedQuestion;
+
+        // Show proctorMessage as a contextual hint when a separate assessment.question exists
+        const proctorHint = rawQuestion && proctorMessage && rawQuestion !== proctorMessage
+          ? proctorMessage
+          : "";
+
         return {
           phaseNumber,
           questionIndex: hasQuestionIndex ? Math.max(1, Number(rawAssessment.questionIndex)) : null,
@@ -414,6 +434,7 @@
             ? rawAssessment.stepId.trim()
             : `phase-${phaseNumber}-q`,
           question,
+          proctorHint,
           answerType: normalizedOptions.length ? answerType : "text",
           expectedOptionCount,
           options: normalizedOptions
@@ -742,6 +763,17 @@ ${backstory}
                 <p className="text-sm text-indigo-200/90 bg-indigo-500/10 border border-indigo-400/30 rounded-xl p-3">
                   No stable option list available for this step. Provide your answer in free text below.
                 </p>
+              )}
+
+              {assessmentState.proctorHint && (
+                <div className="mt-4 pt-3 border-t border-indigo-500/20">
+                  <p className="text-[11px] uppercase tracking-[0.15em] text-indigo-400/70 font-semibold mb-1">
+                    <i className="fa-solid fa-feather-pointed mr-1.5"></i>Proctor's Note
+                  </p>
+                  <p className="text-xs text-indigo-200/60 italic leading-relaxed">
+                    {assessmentState.proctorHint}
+                  </p>
+                </div>
               )}
             </div>
 
