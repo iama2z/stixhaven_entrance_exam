@@ -354,7 +354,7 @@
         return /^(option|choice|answer)\s+[a-z0-9]+$/.test(normalized);
       };
 
-      const isCustomInputOption = (value) => {
+      const shouldOpenCustomInput = (value) => {
         const normalized = sanitizeOptionText(value).toLowerCase();
         return CUSTOM_INPUT_OPTIONS.includes(normalized);
       };
@@ -727,7 +727,7 @@ ${backstory}
 
       const handleOptionSelect = (option) => {
         if (isChatLoading) return;
-        if (isCustomInputOption(option)) {
+        if (shouldOpenCustomInput(option)) {
           setIsCustomInputOpen(true);
           return;
         }
