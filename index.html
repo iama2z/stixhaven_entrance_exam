@@ -251,6 +251,7 @@
       const [chatInput, setChatInput] = useState('');
       const [isChatLoading, setIsChatLoading] = useState(false);
       const [isCustomInputOpen, setIsCustomInputOpen] = useState(false);
+      const [isQuestionsOpen, setIsQuestionsOpen] = useState(false);
       const [isSheetDrawerOpen, setIsSheetDrawerOpen] = useState(false);
       const [assessmentState, setAssessmentState] = useState({
         phaseNumber: 1,
@@ -263,7 +264,9 @@
         options: []
       });
       const chatInputRef = useRef(null);
+      const questionsChatInputRef = useRef(null);
       const chatEndRef = useRef(null);
+      const questionsEndRef = useRef(null);
       const hasInitialized = useRef(false);
 
       const [selectedLineage, setSelectedLineage] = useState("Human");
@@ -296,10 +299,14 @@
       const safeSkills = Array.isArray(selectedSkills) ? selectedSkills : [];
 
       useEffect(() => {
+        if (isQuestionsOpen) {
+          questionsChatInputRef.current?.focus();
+          return;
+        }
         if (isCustomInputOpen) {
           chatInputRef.current?.focus();
         }
-      }, [isCustomInputOpen]);
+      }, [isCustomInputOpen, isQuestionsOpen]);
 
       const getScore  = (stat) => (statAssignments || {})[stat] ?? 10;
       const getMod    = (stat) => Math.floor((getScore(stat) - 10) / 2);
@@ -545,8 +552,9 @@
       };
 
       useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, [chatHistory, isChatLoading]);
+        const endRef = isQuestionsOpen ? questionsEndRef : chatEndRef;
+        endRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, [chatHistory, isChatLoading, isQuestionsOpen]);
 
       const handleLogin = async (e) => {
         e.preventDefault();
@@ -797,26 +805,17 @@ ${backstory}
             </div>
 
             <div className="mt-4 bg-slate-900/70 border border-slate-700/60 rounded-xl p-3 overflow-y-auto min-h-0 flex-1">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2 font-semibold">Transcript</p>
-              <div className="space-y-2 pr-1">
-                {chatHistory.slice(-MAX_TRANSCRIPT_ENTRIES).map((msg, i) => (
-                  <div key={i} className={`text-sm rounded-lg px-3 py-2 border ${
-                    msg.role === "user"
-                      ? "bg-amber-500/10 border-amber-500/30 text-amber-100"
-                      : "bg-indigo-500/10 border-indigo-500/30 text-indigo-100"
-                  }`}>
-                    <span className="text-[10px] uppercase font-bold tracking-[0.18em] opacity-80 block mb-1">
-                      {msg.role === "user" ? "You" : "Proctor"}
-                    </span>
-                    <span className="whitespace-pre-wrap leading-relaxed">{msg.text}</span>
-                  </div>
-                ))}
-                {isChatLoading && (
-                  <div className="text-sm rounded-lg px-3 py-2 border bg-indigo-500/10 border-indigo-500/30 text-indigo-200 italic">
-                    <i className="fa-solid fa-ellipsis fa-fade mr-1"></i>Proctor is preparing the next prompt...
-                  </div>
-                )}
-                <div ref={chatEndRef} />
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 font-semibold">Need help?</p>
+                <button
+                  onClick={() => setIsQuestionsOpen(true)}
+                  className="text-[11px] px-3 py-1.5 rounded-full border border-amber-400/40 bg-amber-500/10 text-amber-200 hover:bg-amber-500/20 transition-all font-semibold"
+                >
+                  <i className="fa-solid fa-circle-question mr-1"></i>I have questions
+                </button>
+              </div>
+              <div className="text-sm text-slate-300/70 leading-relaxed bg-slate-950/40 border border-slate-700/60 rounded-xl p-4">
+                The live transcript is now in the menu. Use <span className="text-amber-200 font-semibold">I have questions</span> whenever you want to ask the proctor something without leaving the exam screen.
               </div>
             </div>
 
@@ -1030,6 +1029,44 @@ ${backstory}
               </div>
             </div>
           );
+          case 5: return (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-500 font-semibold mb-2">Full Transcript</p>
+                <p className="text-xs text-slate-600 leading-relaxed mb-3">
+                  This is the complete exam conversation, including written responses and any questions you asked the proctor.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {chatHistory.length === 0 && (
+                  <div className="text-xs text-slate-500 italic bg-white/60 rounded-lg border border-[#2c2214]/10 p-3">
+                    No transcript has been recorded yet.
+                  </div>
+                )}
+
+                {chatHistory.map((msg, i) => (
+                  <div key={i} className={`text-sm rounded-lg px-3 py-2 border ${
+                    msg.role === "user"
+                      ? "bg-amber-500/10 border-amber-500/30 text-amber-100"
+                      : "bg-indigo-500/10 border-indigo-500/30 text-indigo-100"
+                  }`}>
+                    <span className="text-[10px] uppercase font-bold tracking-[0.18em] opacity-80 block mb-1">
+                      {msg.role === "user" ? "You" : "Proctor"}
+                    </span>
+                    <span className="whitespace-pre-wrap leading-relaxed">{msg.text}</span>
+                  </div>
+                ))}
+
+                {isChatLoading && (
+                  <div className="text-sm rounded-lg px-3 py-2 border bg-indigo-500/10 border-indigo-500/30 text-indigo-200 italic">
+                    <i className="fa-solid fa-ellipsis fa-fade mr-1"></i>Proctor is preparing the next prompt...
+                  </div>
+                )}
+                <div ref={questionsEndRef} />
+              </div>
+            </div>
+          );
           default: return null;
         }
       };
@@ -1080,13 +1117,22 @@ ${backstory}
       return (
         <div className="h-screen relative z-10 bg-gradient-to-b from-slate-950 via-slate-950 to-indigo-950 text-slate-100 overflow-hidden">
           <header className="px-4 md:px-6 py-4 border-b border-indigo-800/40 bg-slate-950/80 backdrop-blur-md flex items-center justify-between">
-            <button
-              onClick={() => setIsSheetDrawerOpen(true)}
-              className="w-10 h-10 rounded-lg border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all text-indigo-200"
-              aria-label="Open character sheet"
-            >
-              <i className="fa-solid fa-bars"></i>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setIsSheetDrawerOpen(true)}
+                className="w-10 h-10 rounded-lg border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 transition-all text-indigo-200"
+                aria-label="Open character sheet"
+              >
+                <i className="fa-solid fa-bars"></i>
+              </button>
+              <button
+                onClick={() => setIsQuestionsOpen(true)}
+                className="h-10 px-3 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 transition-all text-amber-200 text-xs md:text-sm font-semibold whitespace-nowrap"
+                aria-label="Open questions chat"
+              >
+                <i className="fa-solid fa-circle-question mr-2"></i>I have questions
+              </button>
+            </div>
 
             <div className="text-center">
               <h1 className="text-xl md:text-2xl font-bold tracking-wider text-amber-400 font-serif">
@@ -1128,7 +1174,7 @@ ${backstory}
             </div>
 
             <div className="px-4 pt-3 pb-2 flex gap-2 border-b border-slate-800 flex-wrap">
-              {[{ id: 1, label: "Core Stats" }, { id: 2, label: "Backstory" }, { id: 3, label: "Spellbook" }, { id: 4, label: "Campus" }].map(tab => (
+              {[{ id: 1, label: "Core Stats" }, { id: 2, label: "Backstory" }, { id: 3, label: "Spellbook" }, { id: 4, label: "Campus" }, { id: 5, label: "Transcript" }].map(tab => (
                 <button key={tab.id} onClick={() => setActiveSheetTab(tab.id)} className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${activeSheetTab === tab.id ? "bg-amber-500 text-slate-950" : "bg-slate-950 text-slate-400 border border-slate-700 hover:border-amber-500/40"}`}>
                   {tab.label}
                 </button>
@@ -1150,6 +1196,77 @@ ${backstory}
               </button>
             </div>
           </aside>
+
+          <div className={`fixed inset-0 bg-slate-950/70 backdrop-blur-sm transition-opacity z-[55] ${isQuestionsOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+            onClick={() => setIsQuestionsOpen(false)}
+          />
+          <section className={`fixed inset-x-4 md:inset-x-auto md:right-6 md:top-6 bottom-4 md:bottom-auto md:w-[min(92vw,620px)] max-h-[calc(100vh-2rem)] bg-slate-900 border border-amber-500/30 shadow-2xl rounded-2xl z-[60] transition-all duration-300 ${isQuestionsOpen ? "opacity-100 translate-y-0 pointer-events-auto" : "opacity-0 translate-y-4 pointer-events-none"} flex flex-col`}>
+            <div className="px-4 py-3 border-b border-slate-700/70 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold tracking-[0.18em] uppercase text-amber-200">I have questions</h2>
+                <p className="text-[11px] text-slate-400 mt-1">Ask follow-ups, clarify a prompt, or change direction without leaving the exam.</p>
+              </div>
+              <button
+                onClick={() => setIsQuestionsOpen(false)}
+                className="w-8 h-8 rounded-md border border-slate-700 text-slate-300 hover:text-white hover:border-amber-400 transition-all flex-shrink-0"
+                aria-label="Close questions chat"
+              >
+                <i className="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+
+            <div className="flex-1 min-h-0 p-4 overflow-y-auto">
+              <div className="space-y-2 pr-1">
+                {chatHistory.length === 0 && (
+                  <div className="text-sm text-slate-400 bg-slate-950/40 border border-slate-700/60 rounded-xl p-4">
+                    No transcript yet. Your questions will appear here as part of the live conversation.
+                  </div>
+                )}
+
+                {chatHistory.map((msg, i) => (
+                  <div key={i} className={`text-sm rounded-xl px-3 py-2 border ${
+                    msg.role === "user"
+                      ? "bg-amber-500/10 border-amber-500/30 text-amber-100"
+                      : "bg-indigo-500/10 border-indigo-500/30 text-indigo-100"
+                  }`}>
+                    <span className="text-[10px] uppercase font-bold tracking-[0.18em] opacity-80 block mb-1">
+                      {msg.role === "user" ? "You" : "Proctor"}
+                    </span>
+                    <span className="whitespace-pre-wrap leading-relaxed">{msg.text}</span>
+                  </div>
+                ))}
+
+                {isChatLoading && (
+                  <div className="text-sm rounded-xl px-3 py-2 border bg-indigo-500/10 border-indigo-500/30 text-indigo-200 italic">
+                    <i className="fa-solid fa-ellipsis fa-fade mr-1"></i>Proctor is preparing the next prompt...
+                  </div>
+                )}
+
+                <div ref={chatEndRef} />
+              </div>
+            </div>
+
+            <div className="px-4 pb-4 pt-3 border-t border-slate-700/70">
+              <div className="flex gap-2">
+                <input
+                  ref={questionsChatInputRef}
+                  type="text"
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleChatSubmit()}
+                  placeholder="Ask the proctor anything..."
+                  className="flex-1 bg-slate-950 border border-amber-700/60 rounded-lg px-4 py-3 text-sm text-amber-100 focus:border-amber-400 outline-none placeholder:text-amber-800"
+                />
+                <button
+                  onClick={() => handleChatSubmit()}
+                  disabled={isChatLoading || !chatInput.trim()}
+                  className="px-5 py-3 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-slate-950 rounded-lg text-sm font-semibold shadow transition-all whitespace-nowrap"
+                >
+                  {isChatLoading ? <i className="fa-solid fa-spinner fa-spin"></i> : <><i className="fa-solid fa-paper-plane mr-2"></i>Send</>}
+                </button>
+              </div>
+            </div>
+          </section>
 
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-30 opacity-50">
             v1.9.0 - Assessment Card + Drawer UI
