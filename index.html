@@ -277,7 +277,7 @@
       const [selectedJob, setSelectedJob] = useState("");
       const [statAssignments, setStatAssignments] = useState({ STR: null, DEX: null, CON: null, INT: null, WIS: null, CHA: null });
       const [selectedTool, setSelectedTool] = useState("");
-      const [selectedStipend, setSelectedStipend] = useState("Star Performer");
+      const [selectedStipend, setSelectedStipend] = useState("");
       const [selectedWeapon, setSelectedWeapon] = useState("");
       const [selectedArmor, setSelectedArmor] = useState("Unarmored");
       const [selectedLanguage, setSelectedLanguage] = useState("Common");
@@ -294,9 +294,26 @@
       const [flaw, setFlaw] = useState("");
       const [characterName, setCharacterName] = useState("");
       const [backstory, setBackstory] = useState("");
+      const [isExamComplete, setIsExamComplete] = useState(false);
 
       const safeSpells = Array.isArray(selectedSpells) ? selectedSpells : [];
       const safeSkills = Array.isArray(selectedSkills) ? selectedSkills : [];
+      const normalizedStipendKey = selectedJob === "Unemployed" ? "" : selectedStipend;
+      const stipendKitName = normalizedStipendKey
+        ? (STIPEND_KITS[normalizedStipendKey]?.name || normalizedStipendKey)
+        : "";
+      const [equippedWeapon, equippedPack] = (selectedWeapon || "")
+        .split(",")
+        .map(part => part.trim());
+      const isFinalReviewStep = Boolean(
+        !isExamComplete &&
+        assessmentState.phaseNumber === 12 &&
+        characterName &&
+        (
+          /phase-12-(review|confirm|complete)/i.test(assessmentState.stepId || "") ||
+          /ready to begin|orientation packet|paperwork is complete|review your character sheet/i.test(assessmentState.question || "")
+        )
+      );
 
       useEffect(() => {
         if (isQuestionsOpen) {
@@ -483,7 +500,7 @@
         if (data.selectedJob) setSelectedJob(data.selectedJob);
         if (data.statAssignments) setStatAssignments(data.statAssignments);
         if (data.selectedTool) setSelectedTool(data.selectedTool);
-        if (data.selectedStipend) setSelectedStipend(data.selectedStipend);
+        if (Object.prototype.hasOwnProperty.call(data, 'selectedStipend')) setSelectedStipend(data.selectedStipend || "");
         if (data.selectedWeapon) setSelectedWeapon(data.selectedWeapon);
         if (data.selectedArmor) setSelectedArmor(data.selectedArmor);
         if (data.selectedLanguage) setSelectedLanguage(data.selectedLanguage);
@@ -501,6 +518,7 @@
         if (data.flaw) setFlaw(data.flaw);
         if (data.characterName) setCharacterName(data.characterName);
         if (data.backstory) setBackstory(data.backstory);
+        if (data.isExamComplete != null) setIsExamComplete(Boolean(data.isExamComplete));
 
         const loadedPhase = Math.max(1, Math.min(12, Number(data.phase) || 1));
         const history = Array.isArray(data.chatHistory) ? data.chatHistory : [];
@@ -549,6 +567,24 @@
             questionIndex: prev.phaseNumber === clampedPhase ? prev.questionIndex : 1
           }));
         }
+      };
+
+      const finalizeExamCompletion = (selectionLabel = "Review my character sheet") => {
+        const completionMessage = `${characterName || "Student"}, your entrance assessment is complete. Your certificate of completion and finalized character sheet are now ready for review.`;
+        setChatHistory(prev => [
+          ...prev,
+          { role: 'user', text: selectionLabel },
+          { role: 'proctor', text: completionMessage }
+        ]);
+        setAssessmentState(prev => ({
+          ...prev,
+          stepId: 'phase-12-complete',
+          question: 'Assessment Complete',
+          answerType: 'text',
+          expectedOptionCount: 0,
+          options: []
+        }));
+        setIsExamComplete(true);
       };
 
       useEffect(() => {
@@ -629,7 +665,7 @@
             portalUsername: cleanUsername,
             portalPassword: portalPassword,
             phase, chatHistory, characterName, selectedLineage, selectedSize, selectedCollege, selectedClass,
-            selectedClub, selectedJob, selectedStipend, selectedTool, selectedWeapon, selectedArmor, selectedLanguage, alignment, statAssignments, 
+            selectedClub, selectedJob, selectedStipend: normalizedStipendKey, selectedTool, selectedWeapon, selectedArmor, selectedLanguage, alignment, statAssignments, isExamComplete,
             selectedSkills: safeSkills, selectedSpells: safeSpells, resonanceType, selectedTrait, selectedIdeal, selectedBond, friend, rival, flaw, backstory, lastUpdated: new Date().toISOString()
           }, { merge: true });
           
@@ -675,8 +711,10 @@ Club: ${CLUBS[selectedClub]?.name || selectedClub || "None"}
 Campus Job: ${selectedJob || "Unemployed"}
 Skills: ${safeSkills.join(", ")}
 Languages: Common, ${selectedLanguage}
-Tool Focus: ${selectedTool}
-Equipment: ${selectedWeapon}, ${STIPEND_KITS[selectedStipend]?.name}
+Primary Weapon: ${equippedWeapon || "Unassigned"}
+Adventuring Pack: ${equippedPack || "Unassigned"}
+Tool Focus: ${selectedTool || "Unassigned"}
+Stipend Kit: ${stipendKitName || "None"}
 
 --- MAGIC & SPELLS ---
 Spellcasting Ability: ${getSpellAbility()}
@@ -750,10 +788,88 @@ ${backstory}
           setIsCustomInputOpen(true);
           return;
         }
+        if (isFinalReviewStep) {
+          finalizeExamCompletion(option);
+          return;
+        }
         handleChatSubmit(option);
       };
 
+      useEffect(() => {
+        if (!isAuthenticated || !isExamComplete) return;
+        submitToFirebase(true);
+      }, [isAuthenticated, isExamComplete]);
+
+      const renderCompletionPanel = () => (
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 border border-amber-400/30 rounded-2xl shadow-2xl p-5 md:p-7 flex-1 overflow-y-auto">
+            <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-amber-300 font-semibold mb-2">Official Certificate of Completion</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-amber-100 font-serif">Strixhaven Entrance Assessment</h2>
+                <p className="text-sm text-slate-300 mt-2 max-w-2xl">
+                  The Admissions Office recognizes <span className="text-white font-semibold">{characterName || "this student"}</span> as having completed the proctored entrance exam for admission review.
+                </p>
+              </div>
+              <div className="px-4 py-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-200 text-sm font-semibold whitespace-nowrap">
+                <i className="fa-solid fa-seal-exclamation mr-2"></i>Assessment Complete
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="rounded-2xl border border-slate-700/70 bg-slate-950/50 p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 font-semibold mb-3">Student Record</p>
+                <div className="space-y-2 text-sm text-slate-200">
+                  <p><span className="text-slate-400">Name:</span> {characterName || "Unnamed Student"}</p>
+                  <p><span className="text-slate-400">College:</span> {selectedCollege || "Pending"}</p>
+                  <p><span className="text-slate-400">Class:</span> {selectedClass || "Pending"}</p>
+                  <p><span className="text-slate-400">Lineage:</span> {selectedLineage || "Pending"}</p>
+                  <p><span className="text-slate-400">Alignment:</span> {alignment || "Pending"}</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-700/70 bg-slate-950/50 p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 font-semibold mb-3">Issued Loadout</p>
+                <div className="space-y-2 text-sm text-slate-200">
+                  <p><span className="text-slate-400">Primary Weapon:</span> {equippedWeapon || "Pending"}</p>
+                  <p><span className="text-slate-400">Adventuring Pack:</span> {equippedPack || "Pending"}</p>
+                  <p><span className="text-slate-400">Tool Focus:</span> {selectedTool || "Pending"}</p>
+                  <p><span className="text-slate-400">Stipend Kit:</span> {stipendKitName || "None"}</p>
+                  <p><span className="text-slate-400">Armor Preference:</span> {selectedArmor || "Pending"}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4 mb-6">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-amber-300 font-semibold mb-2">Registrar's Note</p>
+              <p className="text-sm text-amber-100/90 leading-relaxed">
+                Keep this record for your archives. You may review the full character sheet from the menu, download the official transcript below, or continue using <span className="font-semibold">I have questions</span> if you want to clarify or revise any part of the assessment.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={() => setIsSheetDrawerOpen(true)}
+                className="px-5 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow transition-all"
+              >
+                <i className="fa-solid fa-scroll mr-2"></i>Review Character Sheet
+              </button>
+              <button
+                onClick={downloadCharacterSheet}
+                className="px-5 py-3 rounded-xl border border-amber-400/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-100 text-sm font-semibold shadow transition-all"
+              >
+                <i className="fa-solid fa-file-arrow-down mr-2"></i>Download Official Transcript
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+
       const renderAssessmentPanel = () => {
+        if (isExamComplete) {
+          return renderCompletionPanel();
+        }
+
         const optionPalette = [
           "from-indigo-600/30 to-indigo-700/20 border-indigo-400/50 text-indigo-100",
           "from-violet-600/30 to-violet-700/20 border-violet-400/50 text-violet-100",
@@ -1036,7 +1152,7 @@ ${backstory}
                 <div className="grid grid-cols-1 gap-2">
                   <p><span className="font-bold text-slate-700">Extracurricular Club:</span> {CLUBS[selectedClub]?.name || selectedClub || "None"}</p>
                   <p><span className="font-bold text-slate-700">Campus Job:</span> {selectedJob || "Unemployed"}</p>
-                  <p><span className="font-bold text-slate-700">Stipend Kit:</span> {STIPEND_KITS[selectedStipend]?.name || "None"}</p>
+                  <p><span className="font-bold text-slate-700">Stipend Kit:</span> {stipendKitName || "None"}</p>
                 </div>
               </div>
               
@@ -1045,6 +1161,15 @@ ${backstory}
                 <div className="grid grid-cols-1 gap-2 bg-white/50 p-3 rounded-lg border border-[#2c2214]/10">
                   <p><span className="font-bold text-emerald-700"><i className="fa-solid fa-handshake mr-1"></i> Friend:</span> {friend || "TBD"}</p>
                   <p><span className="font-bold text-red-700"><i className="fa-solid fa-khanda mr-1"></i> Rival:</span> {rival || "TBD"}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="font-bold text-amber-950 text-sm border-b border-[#2c2214] pb-1 mb-2">Equipment & Focus</p>
+                <div className="grid grid-cols-1 gap-2 bg-white/50 p-3 rounded-lg border border-[#2c2214]/10">
+                  <p><span className="font-bold text-slate-700">Primary Weapon:</span> {equippedWeapon || "Unassigned"}</p>
+                  <p><span className="font-bold text-slate-700">Adventuring Pack:</span> {equippedPack || "Unassigned"}</p>
+                  <p><span className="font-bold text-slate-700">Tool Focus:</span> {selectedTool || "Unassigned"}</p>
                 </div>
               </div>
 
@@ -1075,10 +1200,10 @@ ${backstory}
                 )}
 
                 {chatHistory.map((msg, i) => (
-                  <div key={i} className={`text-sm rounded-lg px-3 py-2 border ${
+                  <div key={i} className={`text-sm rounded-xl px-3 py-2 border bg-slate-950 ${
                     msg.role === "user"
-                      ? "bg-amber-500/10 border-amber-500/30 text-amber-100"
-                      : "bg-indigo-500/10 border-indigo-500/30 text-indigo-100"
+                      ? "border-amber-500/30 text-amber-100"
+                      : "border-indigo-500/30 text-indigo-100"
                   }`}>
                     <span className="text-[10px] uppercase font-bold tracking-[0.18em] opacity-80 block mb-1">
                       {msg.role === "user" ? "You" : "Proctor"}
@@ -1088,7 +1213,7 @@ ${backstory}
                 ))}
 
                 {isChatLoading && (
-                  <div className="text-sm rounded-lg px-3 py-2 border bg-indigo-500/10 border-indigo-500/30 text-indigo-200 italic">
+                  <div className="text-sm rounded-xl px-3 py-2 border bg-slate-950 border-indigo-500/30 text-indigo-200 italic">
                     <i className="fa-solid fa-ellipsis fa-fade mr-1"></i>Proctor is preparing the next prompt...
                   </div>
                 )}
