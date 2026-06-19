@@ -173,6 +173,58 @@
         { name: "Detect Magic",    level: "1st-level", classes: ["Bard","Cleric","Druid","Sorcerer","Wizard"] }
       ]
     };
+    // Spells available that are not in SPELLS_BY_RESONANCE.
+    const EXTENDED_SPELL_DATA = [
+      { name: "Acid Splash",    level: "Cantrip",   classes: ["Sorcerer","Wizard"] },
+      { name: "Chill Touch",    level: "Cantrip",   classes: ["Sorcerer","Warlock","Wizard"] },
+      { name: "Dancing Lights", level: "Cantrip",   classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Druidcraft",     level: "Cantrip",   classes: ["Druid"] },
+      { name: "Light",          level: "Cantrip",   classes: ["Bard","Cleric","Sorcerer","Wizard"] },
+      { name: "Mage Hand",      level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+      { name: "Message",        level: "Cantrip",   classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Poison Spray",   level: "Cantrip",   classes: ["Druid","Sorcerer","Warlock","Wizard"] },
+      { name: "Prestidigitation", level: "Cantrip", classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+      { name: "Produce Flame",  level: "Cantrip",   classes: ["Druid"] },
+      { name: "Shillelagh",     level: "Cantrip",   classes: ["Druid"] },
+      { name: "Shocking Grasp", level: "Cantrip",   classes: ["Sorcerer","Wizard"] },
+      { name: "Thaumaturgy",    level: "Cantrip",   classes: ["Cleric"] },
+      { name: "True Strike",    level: "Cantrip",   classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+      { name: "Alarm",          level: "1st-level", classes: ["Ranger","Wizard"] },
+      { name: "Animal Friendship", level: "1st-level", classes: ["Bard","Druid","Ranger"] },
+      { name: "Armor of Agathys", level: "1st-level", classes: ["Warlock"] },
+      { name: "Arms of Hadar",  level: "1st-level", classes: ["Warlock"] },
+      { name: "Command",        level: "1st-level", classes: ["Bard","Cleric","Paladin"] },
+      { name: "Compelled Duel", level: "1st-level", classes: ["Paladin"] },
+      { name: "Comprehend Languages", level: "1st-level", classes: ["Bard","Sorcerer","Warlock","Wizard"] },
+      { name: "Create or Destroy Water", level: "1st-level", classes: ["Cleric","Druid"] },
+      { name: "Detect Evil and Good", level: "1st-level", classes: ["Cleric","Paladin"] },
+      { name: "Detect Poison and Disease", level: "1st-level", classes: ["Cleric","Druid","Paladin","Ranger"] },
+      { name: "Disguise Self",  level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Divine Favor",   level: "1st-level", classes: ["Paladin"] },
+      { name: "Expeditious Retreat", level: "1st-level", classes: ["Sorcerer","Warlock","Wizard"] },
+      { name: "False Life",     level: "1st-level", classes: ["Sorcerer","Wizard"] },
+      { name: "Feather Fall",   level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Find Familiar",  level: "1st-level", classes: ["Wizard"] },
+      { name: "Floating Disk",  level: "1st-level", classes: ["Wizard"] },
+      { name: "Goodberry",      level: "1st-level", classes: ["Druid","Ranger"] },
+      { name: "Grease",         level: "1st-level", classes: ["Wizard"] },
+      { name: "Hunter's Mark",  level: "1st-level", classes: ["Ranger"] },
+      { name: "Identify",       level: "1st-level", classes: ["Bard","Wizard"] },
+      { name: "Illusory Script", level: "1st-level", classes: ["Bard","Warlock","Wizard"] },
+      { name: "Inflict Wounds", level: "1st-level", classes: ["Cleric"] },
+      { name: "Jump",           level: "1st-level", classes: ["Druid","Ranger","Sorcerer","Wizard"] },
+      { name: "Longstrider",    level: "1st-level", classes: ["Bard","Druid","Ranger","Wizard"] },
+      { name: "Mage Armor",     level: "1st-level", classes: ["Sorcerer","Wizard"] },
+      { name: "Protection from Evil and Good", level: "1st-level", classes: ["Cleric","Paladin","Warlock","Wizard"] },
+      { name: "Purify Food and Drink", level: "1st-level", classes: ["Cleric","Druid","Paladin"] },
+      { name: "Sanctuary",      level: "1st-level", classes: ["Cleric"] },
+      { name: "Shield of Faith", level: "1st-level", classes: ["Cleric","Paladin"] },
+      { name: "Silent Image",   level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Silvery Barbs",  level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Sleep",          level: "1st-level", classes: ["Bard","Sorcerer","Wizard"] },
+      { name: "Speak with Animals", level: "1st-level", classes: ["Bard","Druid","Ranger"] },
+      { name: "Unseen Servant", level: "1st-level", classes: ["Bard","Warlock","Wizard"] }
+    ];
 
     function App() {
       const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -196,6 +248,7 @@
       const [selectedClass, setSelectedClass] = useState("Bard");
       const [selectedCollege, setSelectedCollege] = useState("Prismari");
       const [selectedClub, setSelectedClub] = useState("Fine Artists");
+      const [selectedJob, setSelectedJob] = useState("");
       const [statAssignments, setStatAssignments] = useState({ STR: null, DEX: null, CON: null, INT: null, WIS: null, CHA: null });
       const [selectedTool, setSelectedTool] = useState("");
       const [selectedStipend, setSelectedStipend] = useState("Star Performer");
@@ -209,6 +262,8 @@
       const [selectedTrait, setSelectedTrait] = useState("");
       const [selectedIdeal, setSelectedIdeal] = useState("");
       const [selectedBond, setSelectedBond] = useState("");
+      const [friend, setFriend] = useState("");
+      const [rival, setRival] = useState("");
       const [alignment, setAlignment] = useState("Neutral Good");
       const [flaw, setFlaw] = useState("");
       const [characterName, setCharacterName] = useState("");
@@ -238,7 +293,8 @@
           classes: CLASSES, 
           colleges: COLLEGES, 
           clubs: CLUBS, 
-          currentClass: selectedClass 
+          currentClass: selectedClass,
+          spellsByResonance: SPELLS_BY_RESONANCE
         };
       };
 
@@ -250,6 +306,7 @@
         if (data.selectedClass) setSelectedClass(data.selectedClass);
         if (data.selectedCollege) setSelectedCollege(data.selectedCollege);
         if (data.selectedClub) setSelectedClub(data.selectedClub);
+        if (data.selectedJob) setSelectedJob(data.selectedJob);
         if (data.statAssignments) setStatAssignments(data.statAssignments);
         if (data.selectedTool) setSelectedTool(data.selectedTool);
         if (data.selectedStipend) setSelectedStipend(data.selectedStipend);
@@ -264,6 +321,8 @@
         if (data.selectedTrait) setSelectedTrait(data.selectedTrait);
         if (data.selectedIdeal) setSelectedIdeal(data.selectedIdeal);
         if (data.selectedBond) setSelectedBond(data.selectedBond);
+        if (data.friend) setFriend(data.friend);
+        if (data.rival) setRival(data.rival);
         if (data.alignment) setAlignment(data.alignment);
         if (data.flaw) setFlaw(data.flaw);
         if (data.characterName) setCharacterName(data.characterName);
@@ -272,12 +331,13 @@
 
       const applySystemUpdates = (updates) => {
         if (!updates) return;
-        if (updates.nextPhaseNumber != null) setPhase(Math.max(1, Math.min(11, updates.nextPhaseNumber)));
+        if (updates.nextPhaseNumber != null) setPhase(Math.max(1, Math.min(12, updates.nextPhaseNumber)));
         if (updates.selectedLineage != null) setSelectedLineage(updates.selectedLineage);
         if (updates.selectedSize != null) setSelectedSize(updates.selectedSize);
         if (updates.selectedClass != null) setSelectedClass(updates.selectedClass);
         if (updates.selectedCollege != null) setSelectedCollege(updates.selectedCollege);
         if (updates.selectedClub != null) setSelectedClub(updates.selectedClub);
+        if (updates.selectedJob != null) setSelectedJob(updates.selectedJob);
         if (updates.statAssignments != null) setStatAssignments(prev => ({ ...prev, ...updates.statAssignments }));
         if (updates.selectedTool != null) setSelectedTool(updates.selectedTool);
         if (updates.selectedStipend != null) setSelectedStipend(updates.selectedStipend);
@@ -292,6 +352,8 @@
         if (updates.selectedTrait != null) setSelectedTrait(updates.selectedTrait);
         if (updates.selectedIdeal != null) setSelectedIdeal(updates.selectedIdeal);
         if (updates.selectedBond != null) setSelectedBond(updates.selectedBond);
+        if (updates.friend != null) setFriend(updates.friend);
+        if (updates.rival != null) setRival(updates.rival);
         if (updates.alignment != null) setAlignment(updates.alignment);
         if (updates.flaw != null) setFlaw(updates.flaw);
         if (updates.characterName != null) setCharacterName(updates.characterName);
@@ -369,8 +431,8 @@
             portalUsername: cleanUsername,
             portalPassword: portalPassword,
             phase, chatHistory, characterName, selectedLineage, selectedSize, selectedCollege, selectedClass,
-            selectedClub, selectedStipend, selectedTool, selectedWeapon, selectedArmor, selectedLanguage, alignment, statAssignments, 
-            selectedSkills: safeSkills, selectedSpells: safeSpells, resonanceType, selectedTrait, selectedIdeal, selectedBond, flaw, backstory, lastUpdated: new Date().toISOString()
+            selectedClub, selectedJob, selectedStipend, selectedTool, selectedWeapon, selectedArmor, selectedLanguage, alignment, statAssignments, 
+            selectedSkills: safeSkills, selectedSpells: safeSpells, resonanceType, selectedTrait, selectedIdeal, selectedBond, friend, rival, flaw, backstory, lastUpdated: new Date().toISOString()
           }, { merge: true });
           
           if (!silent) alert("Student File successfully synced to the Strixhaven Cloud!");
@@ -411,7 +473,8 @@ WIS: ${getScore('WIS')} (${getModStr('WIS')})
 CHA: ${getScore('CHA')} (${getModStr('CHA')})
 
 --- ACADEMICS & EXTRACURRICULARS ---
-Club: ${CLUBS[selectedClub]?.name || "None"}
+Club: ${CLUBS[selectedClub]?.name || selectedClub || "None"}
+Campus Job: ${selectedJob || "Unemployed"}
 Skills: ${safeSkills.join(", ")}
 Languages: Common, ${selectedLanguage}
 Tool Focus: ${selectedTool}
@@ -422,11 +485,13 @@ Spellcasting Ability: ${getSpellAbility()}
 Spell Save DC: ${getSpellSaveDC()}
 Known Spells: ${safeSpells.join(", ")}
 
---- PSYCHOLOGICAL PROFILE ---
+--- PSYCHOLOGICAL PROFILE & RELATIONSHIPS ---
 Trait: ${selectedTrait}
 Ideal: ${selectedIdeal}
 Bond: ${selectedBond}
 Flaw: ${flaw}
+Friend: ${friend || "None"}
+Rival: ${rival || "None"}
 
 --- OFFICIAL BACKGROUND FILE ---
 ${backstory}
@@ -590,7 +655,10 @@ ${backstory}
             const expectedCantrips = baseCap.cantrips + (isSpellcaster ? 2 : 0);
             const expectedSpells = baseCap.spells + (isSpellcaster ? 1 : 0);
 
-            const allSpells = Object.values(SPELLS_BY_RESONANCE).reduce((acc, val) => acc.concat(val), []);
+            const allSpells = [
+              ...Object.values(SPELLS_BY_RESONANCE).reduce((acc, val) => acc.concat(val), []),
+              ...EXTENDED_SPELL_DATA
+            ];
             
             const cantrips = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "Cantrip");
             const leveled = safeSpells.filter(s => allSpells.find(x => x.name === s)?.level === "1st-level");
@@ -674,13 +742,32 @@ ${backstory}
           }
 
           case 4: return (
-            <div className="space-y-3 text-xs">
-              <p className="font-bold text-amber-950 text-sm border-b border-[#2c2214] pb-1">Campus Life</p>
-              <p><span className="font-bold text-slate-700">Club:</span> {CLUBS[selectedClub]?.name || "No club selected"}</p>
-              <p><span className="font-bold text-slate-700">Stipend:</span> {STIPEND_KITS[selectedStipend]?.name || "None"}</p>
-              <p><span className="font-bold text-slate-700">Languages:</span> Common, {selectedLanguage}</p>
-              <p><span className="font-bold text-slate-700">Armor Focus:</span> {selectedArmor}</p>
-              <p><span className="font-bold text-slate-700">Proficiency Bonus:</span> +2</p>
+            <div className="space-y-4 text-xs">
+              <div>
+                <p className="font-bold text-amber-950 text-sm border-b border-[#2c2214] pb-1 mb-2">Campus Life & Employment</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <p><span className="font-bold text-slate-700">Extracurricular Club:</span> {CLUBS[selectedClub]?.name || selectedClub || "None"}</p>
+                  <p><span className="font-bold text-slate-700">Campus Job:</span> {selectedJob || "Unemployed"}</p>
+                  <p><span className="font-bold text-slate-700">Stipend Kit:</span> {STIPEND_KITS[selectedStipend]?.name || "None"}</p>
+                </div>
+              </div>
+              
+              <div>
+                <p className="font-bold text-amber-950 text-sm border-b border-[#2c2214] pb-1 mb-2">Relationships</p>
+                <div className="grid grid-cols-1 gap-2 bg-white/50 p-3 rounded-lg border border-[#2c2214]/10">
+                  <p><span className="font-bold text-emerald-700"><i className="fa-solid fa-handshake mr-1"></i> Friend:</span> {friend || "TBD"}</p>
+                  <p><span className="font-bold text-red-700"><i className="fa-solid fa-khanda mr-1"></i> Rival:</span> {rival || "TBD"}</p>
+                </div>
+              </div>
+
+              <div>
+                <p className="font-bold text-amber-950 text-sm border-b border-[#2c2214] pb-1 mb-2">Proficiencies</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <p><span className="font-bold text-slate-700">Languages:</span> Common, {selectedLanguage}</p>
+                  <p><span className="font-bold text-slate-700">Armor Focus:</span> {selectedArmor}</p>
+                  <p><span className="font-bold text-slate-700">Proficiency Bonus:</span> +2</p>
+                </div>
+              </div>
             </div>
           );
           default: return null;
@@ -734,7 +821,7 @@ ${backstory}
                     <i className="fa-solid fa-wand-magic-sparkles mr-2 text-amber-500"></i>STRIXHAVEN
                   </h1>
                   <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">
-                    Proctor Exam - Phase {phase} of 11
+                    Proctor Exam - Phase {phase} of 12
                   </p>
                 </div>
                 <div className="text-right">
@@ -743,7 +830,7 @@ ${backstory}
                 </div>
               </header>
               <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden mt-2 mb-4">
-                <div className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full transition-all duration-500" style={{ width: `${(phase / 11) * 100}%` }}></div>
+                <div className="bg-gradient-to-r from-indigo-600 to-indigo-400 h-full transition-all duration-500" style={{ width: `${(phase / 12) * 100}%` }}></div>
               </div>
             </div>
 
@@ -775,7 +862,7 @@ ${backstory}
           </section>
 
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-50 opacity-50">
-            v1.7.2 - Babel Fix Complete
+            v1.8.0 - Full Campus Life Integration
           </div>
 
         </div>
