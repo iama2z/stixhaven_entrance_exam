@@ -295,6 +295,7 @@
       const [characterName, setCharacterName] = useState("");
       const [backstory, setBackstory] = useState("");
       const [isExamComplete, setIsExamComplete] = useState(false);
+      const [showWelcomePopup, setShowWelcomePopup] = useState(false);
 
       const safeSpells = Array.isArray(selectedSpells) ? selectedSpells : [];
       const safeSkills = Array.isArray(selectedSkills) ? selectedSkills : [];
@@ -618,6 +619,7 @@
             if (docSnap.exists) {
               setAuthError('This Student ID is already taken.');
             } else {
+              setShowWelcomePopup(true);
               setIsAuthenticated(true);
             }
           }
@@ -1425,6 +1427,59 @@ ${backstory}
           <div className="fixed bottom-2 left-3 text-[10px] text-slate-500 font-mono pointer-events-none z-30 opacity-50">
             v1.9.0 - Assessment Card + Drawer UI
           </div>
+
+          {showWelcomePopup && (
+            <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="welcome-popup-title"
+                className="bg-slate-900 border border-amber-500/40 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90dvh] flex flex-col"
+              >
+                <div className="px-6 pt-6 pb-4 border-b border-slate-700/70 flex-shrink-0">
+                  <div className="flex items-center gap-3">
+                    <i className="fa-solid fa-wand-magic-sparkles text-2xl text-amber-400" aria-hidden="true"></i>
+                    <div>
+                      <h2 id="welcome-popup-title" className="text-xl font-bold font-serif text-amber-300">Welcome to Strixhaven University</h2>
+                      <p className="text-xs text-slate-400 tracking-widest uppercase mt-0.5">Office of Admissions — Orientation Packet</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 text-sm text-slate-200 leading-relaxed">
+                  <p>
+                    Welcome prospective student! This interactive exam is intended to offer a fun and fast way to generate a high quality character sheet for a new student entering a DnD campaign centered around Strixhaven University. Strixhaven offers unique play styles that you may be unfamiliar with and our hope in the admissions office is to ease you into the transition of campus life without overwhelming you with the initial research typically required for creating a character sheet from scratch.
+                  </p>
+                  <p>
+                    You may use this exam in a couple ways. First, you could trust the proctor and select the limited options, then review and make changes to your sheet through the <span className="text-amber-300 font-semibold">I have questions</span> button at any time throughout the process. Next, you could ignore the options entirely and focus entirely on your own creativity by asking questions and making requests entirely in the <span className="text-amber-300 font-semibold">I have questions</span> chat interface. You can use any outside resources to fill out your character on your own and just inform the proctor of your choices. When the proctor asks a question just respond with what you truly want, and if none of the options fit your play style just clearly state what does and the proctor should accommodate.
+                  </p>
+
+                  <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4">
+                    <p className="text-xs uppercase tracking-[0.18em] text-amber-300 font-bold mb-2">
+                      <i className="fa-solid fa-triangle-exclamation mr-1.5"></i>Important Note
+                    </p>
+                    <p className="text-amber-100/90 text-sm leading-relaxed">
+                      The proctor is an AI that is using a specific set of questions and responses that we have provided for it to use, but it can make mistakes. In order to make this a dynamic environment it will attempt to make changes to the interface based on your input, which may occasionally result in temporary errors in the UI. These have been shown to resolve if you respond in the chat interface (<span className="font-semibold">I have questions</span>). We have tested this extensively, but the AI is simple and can get confused if you go too far off topic. If all else fails you can always restart with a new user name and password and everything will reset.
+                    </p>
+                  </div>
+
+                  <p className="text-slate-300 italic">
+                    We hope you enjoy your stay at the Strixhaven University of Magical Studies.
+                  </p>
+                </div>
+
+                <div className="px-6 py-4 border-t border-slate-700/70 flex-shrink-0 flex justify-end">
+                  <button
+                    onClick={() => setShowWelcomePopup(false)}
+                    aria-label="Acknowledge welcome message and close"
+                    className="px-8 py-3 bg-amber-600 hover:bg-amber-500 text-slate-950 rounded-xl text-sm font-bold shadow-lg transition-all"
+                  >
+                    <i className="fa-solid fa-check mr-2"></i>Acknowledged
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
