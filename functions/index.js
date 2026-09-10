@@ -231,7 +231,24 @@ exports.strixhavenConsultant = onCall(
           historyForGemini.shift();
         }
 
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+        const geminiApiKey = process.env.GEMINI_API_KEY;
+        const apiKeyPresent = typeof geminiApiKey === "string" && geminiApiKey.trim().length > 0;
+        console.log("GEMINI_API_KEY availability check", {
+          present: apiKeyPresent,
+        });
+
+        if (!apiKeyPresent) {
+          console.error("Missing GEMINI_API_KEY secret for Biblioplex chat request.", {
+            envValueType: typeof geminiApiKey,
+            hasValue: !!geminiApiKey,
+          });
+          throw new HttpsError(
+              "failed-precondition",
+              "Server configuration error: GEMINI_API_KEY is not available.",
+          );
+        }
+
+        const genAI = new GoogleGenerativeAI(geminiApiKey);
         const prompt = `[SYSTEM BACKGROUND DATA FOR CURRENT PHASE: ${JSON.stringify(gameData)}]\n\nSTUDENT SAYS: ${latestMessage}`;
 
         const fallbackChain = ["gemini-2.5-flash", "gemini-1.5-flash", "gemini-1.5-flash-8b"];
@@ -254,8 +271,15 @@ exports.strixhavenConsultant = onCall(
             break; 
             
           } catch (error) {
-            console.warn(`Traffic jam or error on ${modelName}, pivoting to next fallback...`);
-            lastError = error; 
+            const errorMessage = error && error.message ? error.message : null;
+            const errorStatus = error && error.status ? error.status : null;
+            const errorCode = error && error.code ? error.code : null;
+            console.warn(`Model request failed on ${modelName}; trying next fallback model.`, {
+              message: errorMessage,
+              status: errorStatus,
+              code: errorCode,
+            });
+            lastError = error;
           }
         }
 
@@ -275,7 +299,19 @@ exports.strixhavenConsultant = onCall(
         return normalizeProctorResponse(parsedResponse, gameData.phase || 1);
 
       } catch (error) {
-        console.error("Proctor Error:", error);
+        if (error instanceof HttpsError) {
+          throw error;
+        }
+        const errorMessage = error && error.message ? error.message : null;
+        const errorStatus = error && error.status ? error.status : null;
+        const errorCode = error && error.code ? error.code : null;
+        const errorStack = error && error.stack ? error.stack : null;
+        console.error("Proctor Error:", {
+          message: errorMessage,
+          status: errorStatus,
+          code: errorCode,
+          stack: errorStack,
+        });
         throw new HttpsError("internal", "The Biblioplex archives are currently unreachable.");
       }
     }
