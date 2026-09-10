@@ -235,7 +235,6 @@ exports.strixhavenConsultant = onCall(
         const apiKeyPresent = typeof geminiApiKey === "string" && geminiApiKey.trim().length > 0;
         console.log("GEMINI_API_KEY availability check", {
           present: apiKeyPresent,
-          length: geminiApiKey ? geminiApiKey.length : 0,
         });
 
         if (!apiKeyPresent) {
