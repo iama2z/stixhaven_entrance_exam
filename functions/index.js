@@ -238,7 +238,7 @@ exports.strixhavenConsultant = onCall(
         });
 
         if (!apiKeyPresent) {
-          console.error("Missing GEMINI_API_KEY secret for strixhavenConsultant.", {
+          console.error("Missing GEMINI_API_KEY secret for Biblioplex chat request.", {
             envValueType: typeof geminiApiKey,
             hasValue: !!geminiApiKey,
           });
@@ -274,7 +274,7 @@ exports.strixhavenConsultant = onCall(
             const errorMessage = error && error.message ? error.message : null;
             const errorStatus = error && error.status ? error.status : null;
             const errorCode = error && error.code ? error.code : null;
-            console.warn(`Traffic jam or error on ${modelName}, pivoting to next fallback...`, {
+            console.warn(`Model request failed on ${modelName}; trying next fallback model.`, {
               message: errorMessage,
               status: errorStatus,
               code: errorCode,
